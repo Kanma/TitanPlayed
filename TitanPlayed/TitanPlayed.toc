@@ -1,0 +1,12 @@
+## Interface: 50001
+## Title: Titan [|cffeda55fPlayed|r]
+## Notes: Display time played for each character
+## Author: Philip Abbet
+## DefaultState: Enabled
+## SavedVariables: TitanPlayedTimes
+## OptionalDeps: 
+## Dependencies: Titan
+## Version: 1.0
+libs\LibQTip-1.0\LibQTip-1.0.lua
+libs\LibStub\LibStub.lua
+TitanPlayed.xml

@@ -1,0 +1,26 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+    <Script file="TitanPlayed.lua"/>
+    <Frame parent="UIParent">
+        <Frames>
+            <Button name="TitanPanelPlayedButton" inherits="TitanPanelIconTemplate" frameStrata="FULLSCREEN" toplevel="true">
+                <Scripts>
+                    <OnLoad>
+                        TitanPlayed.Button_OnLoad(self);
+                        TitanPanelButton_OnLoad(self);
+                    </OnLoad>
+                    <OnEvent>
+                        TitanPlayed.Button_OnEvent(self, event, ...);
+                    </OnEvent>
+                    <OnClick>
+                        TitanPlayed.Button_OnClick(self, button);
+                        TitanPanelButton_OnClick(self, button);
+                    </OnClick>
+                    <OnEnter>
+                        TitanPlayed.Button_OnEnter(self);
+                    </OnEnter>
+                </Scripts>
+            </Button>
+        </Frames>
+    </Frame>
+</Ui>
