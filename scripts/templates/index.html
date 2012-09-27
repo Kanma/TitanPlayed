@@ -49,11 +49,23 @@
 </head>
 <body>
 
+    <a href="https://github.com/Kanma/TitanPlayed">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub" />
+    </a>
+
     <div>
         <h2>Time played on each character</h2>
         <span id="graph_played_title"></span>
-        <canvas id="graph_played" width="1000" height="600" style="cursor: default;"></canvas>
-        <table id="legend"></table>
+        <table>
+            <tr>
+                <td>
+                    <canvas id="graph_played" width="1000" height="600" style="cursor: default;"></canvas>
+                </td>
+                <td>
+                    <table id="legend"></table>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <span class="rgraph">Graphs generated with the  <a href="http://www.rgraph.net">RGraph library</a></span>
