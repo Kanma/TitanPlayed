@@ -5,7 +5,13 @@ body
 }
 
 
-span#graph_character_played_title
+h2
+{
+    margin-top: 50px;
+}
+
+
+td#graph_character_played_title
 {
     display: block;
     font-size: 16px;
@@ -20,4 +26,12 @@ span.rgraph
     text-align: right;
     font-size: 11px;
     margin-top: 20px;
+}
+
+
+td.title
+{
+    font-size: 16px;
+    font-style: italic;
+    text-align: center;
 }

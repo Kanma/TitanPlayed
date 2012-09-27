@@ -10,6 +10,7 @@
     <script src="./js/rgraph/RGraph.common.resizing.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.bar.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.line.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.pie.js" type="text/javascript"></script>
 
     <script type="text/javascript">
         // Colors from http://www.wowwiki.com/Class_colors
@@ -279,7 +280,7 @@
             max_value = Math.ceil(max_value);
 
 
-            // Create the bar chart
+            // Create the line chart
             var line = new RGraph.Line('graph_day_played', data);
             line.Set('chart.labels', labels);
             line.Set('chart.gutter.left', 45);
@@ -295,6 +296,89 @@
             line.Draw();
         }
 
+
+        function drawCharactersPie(canvas_id, limit)
+        {
+            // Prepare the data for the pie chart
+            var data = new Array();
+            var labels = new Array();
+            var colors = new Array();
+
+            var current_character = 0;
+            var total = 0;
+            for (var i = 0; i < character_names.length; ++i)
+            {
+                if (characters_to_ignore.indexOf(character_names[i]) !== -1)
+                    continue;
+
+                var reference = 0;
+                if ((limit !== null) && (limit < timestamps.length))
+                {
+                    var start_index = timestamps.length - limit - 1;
+
+                    while (start_index >= 0)
+                    {
+                        var str_timestamp = Number(timestamps[start_index]).toString();
+
+                        if (entries[character_names[i]][str_timestamp] !== undefined)
+                        {
+                            reference = entries[character_names[i]][str_timestamp];
+                            break;
+                        }
+
+                        --start_index;
+                    }
+
+                    if (start_index < 0)
+                    {
+                        start_index = timestamps.length - limit;
+
+                        while (start_index < timestamps.length)
+                        {
+                            var str_timestamp = Number(timestamps[start_index]).toString();
+
+                            if (entries[character_names[i]][str_timestamp] !== undefined)
+                            {
+                                reference = entries[character_names[i]][str_timestamp];
+                                break;
+                            }
+
+                            ++start_index;
+                        }
+                    }
+                }
+
+                var str_last_timestamp = Number(entries[character_names[i]]['last']).toString();
+                var duration = entries[character_names[i]][str_last_timestamp] - reference;
+
+                if (duration > 0)
+                {
+                    data[current_character] = duration;
+                    labels[current_character] = character_names[i];
+                    colors[current_character] = getColor(character_names[i]);
+
+                    total += duration;
+
+                    ++current_character;
+                }
+            }
+
+            for (var i = 0; i < data.length; ++i)
+            {
+                var percentage = 100.0 * data[i] / total;
+                percentage = percentage - ((percentage * 100) % 100) / 100;
+                labels[i] += ' (' + percentage + '%)'
+            }
+
+            // Create the pie chart
+            var pie = new RGraph.Pie(canvas_id, data);
+            pie.Set('chart.tooltips', labels);
+            pie.Set('chart.linewidth', 2);
+            pie.Set('chart.colors', colors);
+            pie.Set('chart.strokestyle', '#000000');
+            pie.Draw();
+        }
+
     </script>
 </head>
 <body>
@@ -305,8 +389,10 @@
 
     <div>
         <h2>Time played on each character</h2>
-        <span id="graph_character_played_title"></span>
         <table>
+            <tr>
+                <td colspan="2" id="graph_character_played_title"></td>
+            </tr>
             <tr>
                 <td>
                     <canvas id="graph_character_played" width="1000" height="600" style="cursor: default;"></canvas>
@@ -323,6 +409,44 @@
         <canvas id="graph_day_played" width="1000" height="600" style="cursor: default;"></canvas>
     </div>
 
+    <div>
+        <h2>Per-character percentage of time played</h2>
+        <table>
+            <tr>
+                <td class="title">All time</td>
+                <td class="title">Last 2 months</td>
+                <td class="title">Last month</td>
+            </tr>
+            <tr>
+                <td>
+                    <canvas id="graph_characters_pie_all" width="400" height="400" style="cursor: default;"></canvas>
+                </td>
+                <td>
+                    <canvas id="graph_characters_pie_2_months" width="400" height="400" style="cursor: default;"></canvas>
+                </td>
+                <td>
+                    <canvas id="graph_characters_pie_1_month" width="400" height="400" style="cursor: default;"></canvas>
+                </td>
+            </tr>
+            <tr>
+                <td class="title">Last 2 weeks</td>
+                <td class="title">Last week</td>
+                <td class="title">Last 3 days</td>
+            </tr>
+            <tr>
+                <td>
+                    <canvas id="graph_characters_pie_2_weeks" width="400" height="400" style="cursor: default;"></canvas>
+                </td>
+                <td>
+                    <canvas id="graph_characters_pie_1_week" width="400" height="400" style="cursor: default;"></canvas>
+                </td>
+                <td>
+                    <canvas id="graph_characters_pie_3_days" width="400" height="400" style="cursor: default;"></canvas>
+                </td>
+            </tr>
+        </table>
+    </div>
+
     <span class="rgraph">Graphs generated with the  <a href="http://www.rgraph.net">RGraph library</a></span>
 
     <script type="text/javascript">
@@ -330,6 +454,12 @@
         {
             drawPerCharacterPlayTime();
             drawTotalPlayTime();
+            drawCharactersPie('graph_characters_pie_all', null);
+            drawCharactersPie('graph_characters_pie_2_months', 60);
+            drawCharactersPie('graph_characters_pie_1_month', 30);
+            drawCharactersPie('graph_characters_pie_2_weeks', 14);
+            drawCharactersPie('graph_characters_pie_1_week', 7);
+            drawCharactersPie('graph_characters_pie_3_days', 3);
         }
     </script>
 </html>

@@ -85,10 +85,13 @@ displaying various interactive graphs:
 
 * your activity per character
 * your activity per day
+* your percentage time played with each character for various periods
 
 ![Activity per character](https://raw.github.com/Kanma/TitanPlayed/master/images/html1.png)
 
 ![Activity per day](https://raw.github.com/Kanma/TitanPlayed/master/images/html2.png)
+
+![Activity per day](https://raw.github.com/Kanma/TitanPlayed/master/images/html3.png)
 
 If you want to ignore some characters, or to change their colors, you can copy the file
 *settings_example.py* (your copy must be called *settings.py* and be located alongside
