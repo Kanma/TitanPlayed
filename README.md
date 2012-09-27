@@ -81,10 +81,14 @@ Usage: `./plot-html.py <your_data_file> [<dest_folder>]`
 The default value for *dest_folder* is `./html`.
 
 It will produce a web page in *dest_folder* (complete with CSS and JavaScript files)
-displaying various interactive graphs (note: at the moment, only your activity per
-character is shown):
+displaying various interactive graphs:
 
-![Example graph](https://raw.github.com/Kanma/TitanPlayed/master/images/html.png)
+* your activity per character
+* your activity per day
+
+![Activity per character](https://raw.github.com/Kanma/TitanPlayed/master/images/html1.png)
+
+![Activity per day](https://raw.github.com/Kanma/TitanPlayed/master/images/html2.png)
 
 If you want to ignore some characters, or to change their colors, you can copy the file
 *settings_example.py* (your copy must be called *settings.py* and be located alongside

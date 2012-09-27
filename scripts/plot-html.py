@@ -4,7 +4,6 @@ import os
 import sys
 import json
 import shutil
-from datetime import date
 
 
 # Process the command-line arguments
@@ -64,14 +63,18 @@ entries_stringified = ''.join(processed_lines)
 entries = json.loads(entries_stringified)
 
 
-# Retrieves a sorted list of all the timestamps in the data file
-timestamps = []
+# Retrieves a sorted list of all the timestamps in the data file, without missing days
+first_day = None
+last_day = None
 for name, details in entries.items():
-    for timestamp in filter(lambda x: (x != u'last') and (x != u'class'), details.keys()):
-        timestamps.append(int(timestamp))
+    if first_day is not None:
+        last_day = max(last_day, details['last'])
+        first_day = min(first_day, min(map(lambda x: int(x), filter(lambda x: (x != u'last') and (x != u'class'), details.keys()))))
+    else:
+        last_day = details['last']
+        first_day = min(map(lambda x: int(x), filter(lambda x: (x != u'last') and (x != u'class'), details.keys())))
 
-timestamps = list(set(timestamps))
-timestamps.sort()
+timestamps = range(first_day, last_day + 1, 3600 * 24)
 
 
 # Retrieves a sorted list of all the characters in the data file

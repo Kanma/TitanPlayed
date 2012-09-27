@@ -9,6 +9,7 @@
     <script src="./js/rgraph/RGraph.common.effects.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.common.resizing.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.bar.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.line.js" type="text/javascript"></script>
 
     <script type="text/javascript">
         // Colors from http://www.wowwiki.com/Class_colors
@@ -45,33 +46,8 @@
             return DEFAULT_COLOR;
         }
 
-    </script>
-</head>
-<body>
 
-    <a href="https://github.com/Kanma/TitanPlayed">
-        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub" />
-    </a>
-
-    <div>
-        <h2>Time played on each character</h2>
-        <span id="graph_played_title"></span>
-        <table>
-            <tr>
-                <td>
-                    <canvas id="graph_played" width="1000" height="600" style="cursor: default;"></canvas>
-                </td>
-                <td>
-                    <table id="legend"></table>
-                </td>
-            </tr>
-        </table>
-    </div>
-
-    <span class="rgraph">Graphs generated with the  <a href="http://www.rgraph.net">RGraph library</a></span>
-
-    <script type="text/javascript">
-        window.onload = function ()
+        function drawPerCharacterPlayTime()
         {
             // Prepare the data for the bar chart
             var data = new Array();
@@ -83,7 +59,7 @@
             var date_start = new Date(timestamps[offset + 1] * 1000);
             var date_end = new Date(timestamps[timestamps.length-1] * 1000);
 
-            $('#graph_played_title').text(date_start.toLocaleDateString() + ' - ' + date_end.toLocaleDateString());
+            $('#graph_character_played_title').text(date_start.toLocaleDateString() + ' - ' + date_end.toLocaleDateString());
 
             var current_character = 0;
             for (var i = 0; i < character_names.length; ++i)
@@ -194,7 +170,7 @@
 
 
             // Create the bar chart
-            var bar = new RGraph.Bar('graph_played', data);
+            var bar = new RGraph.Bar('graph_character_played', data);
             bar.Set('chart.labels', labels);
             bar.Set('chart.tooltips', tooltips);
             bar.Set('chart.gutter.left', 45);
@@ -231,6 +207,129 @@
 
                 legend.append(row);
             }
+        }
+
+
+        function drawTotalPlayTime()
+        {
+            // Prepare the data for the line chart
+            var data = new Array();
+            var labels = new Array();
+
+            for (var i = 0; i < character_names.length; ++i)
+            {
+                if (characters_to_ignore.indexOf(character_names[i]) !== -1)
+                    continue;
+
+                var previous_timestamp = null;
+                for (var j = 0; j < timestamps.length; ++j)
+                {
+                    var str_timestamp = Number(timestamps[j]).toString();
+
+                    if ((j > 0) && (i == 0))
+                        data[j-1] = 0;
+
+                    if (entries[character_names[i]][str_timestamp] !== undefined)
+                    {
+                        if (previous_timestamp !== null)
+                        {
+                            var duration = entries[character_names[i]][str_timestamp] - entries[character_names[i]][previous_timestamp];
+                            data[j-1] += duration / 3600.0;
+                            previous_timestamp = str_timestamp
+                        }
+                        else
+                        {
+                            previous_timestamp = str_timestamp;
+                        }
+                    }
+                }
+            }
+
+            var current_year = null;
+            var current_month = null;
+            var max_value = 1;
+
+            for (var j = 1; j < timestamps.length; ++j)
+            {
+                var date = new Date(timestamps[j] * 1000);
+
+                labels[j-1] = '';
+
+                if (timestamps.length < 31)
+                    labels[j-1] = date.getUTCDate();
+
+                if (current_month != date.getUTCMonth())
+                {
+                    if (timestamps.length < 31)
+                        labels[j-1] += '/';
+
+                    labels[j-1] += date.getUTCMonth() + 1;
+                    current_month = date.getUTCMonth();
+                }
+
+                if (current_year != date.getUTCFullYear())
+                {
+                    labels[j-1] += '/' + date.getUTCFullYear();
+                    current_year = date.getUTCFullYear();
+                }
+
+                max_value = Math.max(max_value, data[j-1]);
+            }
+
+            max_value = Math.ceil(max_value);
+
+
+            // Create the bar chart
+            var line = new RGraph.Line('graph_day_played', data);
+            line.Set('chart.labels', labels);
+            line.Set('chart.gutter.left', 45);
+            line.Set('chart.background.barcolor1', 'white');
+            line.Set('chart.background.barcolor2', 'white');
+            line.Set('chart.background.grid', true);
+            line.Set('chart.colors', ['red']);
+            line.Set('chart.linewidth', 2);
+            line.Set('chart.filled', false);
+            line.Set('chart.hmargin', 10);
+            line.Set('chart.units.post', 'h');
+            line.Set('chart.ymax', max_value);
+            line.Draw();
+        }
+
+    </script>
+</head>
+<body>
+
+    <a href="https://github.com/Kanma/TitanPlayed">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub" />
+    </a>
+
+    <div>
+        <h2>Time played on each character</h2>
+        <span id="graph_character_played_title"></span>
+        <table>
+            <tr>
+                <td>
+                    <canvas id="graph_character_played" width="1000" height="600" style="cursor: default;"></canvas>
+                </td>
+                <td>
+                    <table id="legend"></table>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div>
+        <h2>Time played per day</h2>
+        <canvas id="graph_day_played" width="1000" height="600" style="cursor: default;"></canvas>
+    </div>
+
+    <span class="rgraph">Graphs generated with the  <a href="http://www.rgraph.net">RGraph library</a></span>
+
+    <script type="text/javascript">
+        window.onload = function ()
+        {
+            drawPerCharacterPlayTime();
+            drawTotalPlayTime();
         }
     </script>
 </html>
