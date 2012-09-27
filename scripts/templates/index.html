@@ -1,0 +1,224 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="./css/style.css" />
+
+    <script src="./js/jquery.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.common.core.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.common.tooltips.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.common.dynamic.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.common.effects.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.common.resizing.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.bar.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        // Colors from http://www.wowwiki.com/Class_colors
+        var CLASS_COLORS = {
+            'DEATHKNIGHT':  '#C41F3B',
+            'DRUID':        '#FF7D0A',
+            'HUNTER':       '#ABD473',
+            'MAGE':         '#69CCF0',
+            'MONK':         '#558A84',
+            'PALADIN':      '#F58CBA',
+            'PRIEST':       '#FFFFFF',
+            'ROGUE':        '#FFF569',
+            'SHAMAN':       '#0070DE',
+            'WARLOCK':      '#9482C9',
+            'WARRIOR':      '#C79C6E',
+        };
+
+        var DEFAULT_COLOR = '#808080';
+
+        var entries = $ENTRIES$;
+        var timestamps = $TIMETAMPS$;
+        var character_names = $CHARACTER_NAMES$;
+        var characters_to_ignore = $CHARACTERS_TO_IGNORE$;
+        var characters_colors = $CHARACTERS_COLORS$;
+
+
+        function getColor(name)
+        {
+            if (characters_colors[name] !== undefined)
+                return characters_colors[name];
+            else if (CLASS_COLORS[entries[name].class] !== undefined)
+                return CLASS_COLORS[entries[name].class];
+
+            return DEFAULT_COLOR;
+        }
+
+    </script>
+</head>
+<body>
+
+    <div>
+        <h2>Time played on each character</h2>
+        <span id="graph_played_title"></span>
+        <canvas id="graph_played" width="1000" height="600" style="cursor: default;"></canvas>
+        <table id="legend"></table>
+    </div>
+
+    <span class="rgraph">Graphs generated with the  <a href="http://www.rgraph.net">RGraph library</a></span>
+
+    <script type="text/javascript">
+        window.onload = function ()
+        {
+            // Prepare the data for the bar chart
+            var data = new Array();
+            var colors = new Array();
+            var labels = new Array();
+            var tooltips_stacked = new Array();
+
+            var offset = Math.max(timestamps.length - 15, 0);
+            var date_start = new Date(timestamps[offset + 1] * 1000);
+            var date_end = new Date(timestamps[timestamps.length-1] * 1000);
+
+            $('#graph_played_title').text(date_start.toLocaleDateString() + ' - ' + date_end.toLocaleDateString());
+
+            var current_character = 0;
+            for (var i = 0; i < character_names.length; ++i)
+            {
+                if (characters_to_ignore.indexOf(character_names[i]) !== -1)
+                    continue;
+
+                colors[current_character] = getColor(character_names[i]);
+
+                var previous_timestamp = null;
+                for (var j = offset; j < timestamps.length; ++j)
+                {
+                    var str_timestamp = Number(timestamps[j]).toString();
+
+                    if ((j > offset) && (i == 0))
+                    {
+                        data[j-1] = new Array();
+                        tooltips_stacked[j-1] = new Array();
+                    }
+
+                    if (entries[character_names[i]][str_timestamp] !== undefined)
+                    {
+                        if (previous_timestamp !== null)
+                        {
+                            var duration = entries[character_names[i]][str_timestamp] - entries[character_names[i]][previous_timestamp];
+
+                            data[j-1][current_character] = duration / 3600.0;
+
+                            var seconds = duration % 60;
+                            var minutes = ((duration - seconds) / 60) % 60;
+                            var hours = (duration - minutes * 60 - seconds) / 3600;
+
+                            var text = character_names[i] + ' (';
+
+                            if (hours < 10)
+                                text += '0';
+                            text += hours + ':';
+
+                            if (minutes < 10)
+                                text += '0';
+                            text += minutes + ':';
+
+                            if (seconds < 10)
+                                text += '0';
+                            text += seconds + ')';
+
+                            tooltips_stacked[j-1][current_character] = text;
+
+                            previous_timestamp = str_timestamp
+                        }
+                        else
+                        {
+                            previous_timestamp = str_timestamp;
+                            if (j > offset)
+                            {
+                                data[j-1][current_character] = 0;
+                                tooltips_stacked[j-1][current_character] = '';
+                            }
+                        }
+                    }
+                    else if (j > offset)
+                    {
+                        data[j-1][current_character] = 0;
+                        tooltips_stacked[j-1][current_character] = '';
+                    }
+                }
+
+                ++current_character;
+            }
+
+            var tooltips = new Array();
+            for (var j = 0; j < tooltips_stacked.length; ++j)
+            {
+                for (var i = 0; i < tooltips_stacked[j].length; ++i)
+                    tooltips[j * tooltips_stacked[j].length + i] = tooltips_stacked[j][i];
+            }
+
+
+            var current_year = null;
+            var current_month = null;
+            var max_value = 1;
+
+            for (var j = 1; j < timestamps.length; ++j)
+            {
+                var date = new Date(timestamps[j] * 1000);
+
+                labels[j-1] = date.getUTCDate();
+
+                if (current_month != date.getUTCMonth())
+                {
+                    labels[j-1] = labels[j-1] + '/' + (date.getUTCMonth() + 1);
+                    current_month = date.getUTCMonth();
+                }
+
+                if (current_year != date.getUTCFullYear())
+                {
+                    labels[j-1] = labels[j-1] + '/' + date.getUTCFullYear();
+                    current_year = date.getUTCFullYear();
+                }
+
+                var total = 0;
+                for (var i = 0; i < data[j-1].length; ++i)
+                    total += data[j-1][i];
+                max_value = Math.max(max_value, total);
+            }
+
+            max_value = Math.ceil(max_value);
+
+
+            // Create the bar chart
+            var bar = new RGraph.Bar('graph_played', data);
+            bar.Set('chart.labels', labels);
+            bar.Set('chart.tooltips', tooltips);
+            bar.Set('chart.gutter.left', 45);
+            bar.Set('chart.background.barcolor1', 'white');
+            bar.Set('chart.background.barcolor2', 'white');
+            bar.Set('chart.background.grid', true);
+            bar.Set('chart.colors', colors);
+            bar.Set('chart.grouping', 'stacked');
+            bar.Set('chart.hmargin', 10);
+            bar.Set('chart.strokestyle', '#000000');
+            bar.Set('chart.units.post', 'h');
+            bar.Set('chart.ymax', max_value);
+            bar.Set('chart.variant', '3d');
+            bar.Draw();
+
+
+            // Fill the legend panel
+            var legend = $('#legend');
+            for (var i = 0; i < character_names.length; ++i)
+            {
+                if (characters_to_ignore.indexOf(character_names[i]) !== -1)
+                    continue;
+
+                var row = document.createElement('tr');
+
+                var color_cell = document.createElement('td');
+                color_cell.style.width = '25px';
+                color_cell.style.backgroundColor = getColor(character_names[i]);
+                row.appendChild(color_cell);
+
+                var name_cell = document.createElement('td');
+                name_cell.textContent = character_names[i];
+                row.appendChild(name_cell);
+
+                legend.append(row);
+            }
+        }
+    </script>
+</html>

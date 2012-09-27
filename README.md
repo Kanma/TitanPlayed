@@ -43,7 +43,7 @@ The *scripts/* folder contains the various visualization scripts available.
 The data saved by the TitanPlayed is located at
 *WTF/Account/<your_account_name>/SavedVariables/TitanPlayed.lua*
 
-Here is an example of such file:
+Here is an example of such file (from the file *scripts/example.lua*):
 
 `TitanPlayedTimes = {
 	["Bob"] = {
@@ -74,6 +74,26 @@ on 2012/9/24.
 
 For convenience, the *last* entry indicates which day is the last one.
 
+### plot-html.py
+
+Usage: `./plot-html.py <your_data_file> [<dest_folder>]`
+
+The default value for *dest_folder* is `./html`.
+
+It will produce a web page in *dest_folder* (complete with CSS and JavaScript files)
+displaying various interactive graphs (note: at the moment, only your activity per
+character is shown):
+
+![Example graph](https://raw.github.com/Kanma/TitanPlayed/master/images/html.png)
+
+If you want to ignore some characters, or to change their colors, you can copy the file
+*settings_example.py* (your copy must be called *settings.py* and be located alongside
+the *plot-html.py* script) and modify it to your liking.
+
+You can customize the generated HTML page by modifying the template located at:
+*scripts/templates/index.html*.
+
+
 ### plot-stats.py
 
 **Note**: This script requires *matplotlib* and *numpy*
@@ -86,7 +106,8 @@ character:
 ![Example graph](https://raw.github.com/Kanma/TitanPlayed/master/images/stats-played.png)
 
 If you want to ignore some characters, or to change their colors, you can copy the file
-*settings_example.py* and modify it to your liking.
+*settings_example.py* (your copy must be called *settings.py* and be located alongside
+the *plot-stats.py* script) and modify it to your liking.
 
 
 ## License
