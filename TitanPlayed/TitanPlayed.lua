@@ -68,8 +68,10 @@ function TP.Button_OnLoad(self)
 
     -- Tell Blizzard the events we need
     self:RegisterEvent("ADDON_LOADED");
+    self:RegisterEvent("PLAYER_ENTERING_WORLD");
     self:RegisterEvent("PLAYER_LEAVING_WORLD");
     self:RegisterEvent("PLAYER_LEVEL_UP");
+    self:RegisterEvent("PLAYER_MONEY");
     self:RegisterEvent("TIME_PLAYED_MSG");
 end
 
@@ -92,12 +94,15 @@ function TP.Button_OnEvent(self, event, ...)
             TitanPlayedTimes[name].class = englishClass;
         end
 
-        TitanPlayedTimes[name].money = GetMoney();
         TitanPlayedTimes[name].level = UnitLevel("player");
 
         if (TitanPlayedTimes[name]['levels_history'] == nil) then
             TitanPlayedTimes[name].levels_history = {};
         end
+
+        if (TitanPlayedTimes[name]['money'] == nil) then
+			TitanPlayedTimes[name].money = 0;
+		end
 
 		for i = table.getn(TitanPlayedTimes[name].levels_history) + 1, TitanPlayedTimes[name].level do
             TitanPlayedTimes[name].levels_history[i] = 0;
@@ -107,6 +112,9 @@ function TP.Button_OnEvent(self, event, ...)
             TitanPlayedTimes[name][current_entry] = 0;
             TitanPlayedTimes[name].last = current_entry;
         end
+
+    elseif (event == "PLAYER_ENTERING_WORLD") then
+        TitanPlayedTimes[name].money = GetMoney();
 
     elseif (event == "PLAYER_LEAVING_WORLD") then
         local current_time = time();
@@ -123,11 +131,12 @@ function TP.Button_OnEvent(self, event, ...)
             reference_time = current_time;
         end
 
-        TitanPlayedTimes[name].money = GetMoney();
-
     elseif (event == "PLAYER_LEVEL_UP") then
         TitanPlayedTimes[name].level = arg1;
         TitanPlayedTimes[name].levels_history[arg1] = time();
+
+    elseif (event == "PLAYER_MONEY") then
+        TitanPlayedTimes[name].money = GetMoney();
 
     elseif (event == "TIME_PLAYED_MSG") then
         local arg1, arg2 = ...;
