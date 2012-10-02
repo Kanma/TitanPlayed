@@ -17,7 +17,7 @@ TP.tooltip_hint   = "Hint: Left-click to view your time played on each character
 TP.menu_hide      = "Hide"
 
 --  Get data from the TOC file.
-TP.version = tostring(GetAddOnMetadata(TP.addon, "Version")) or "Unknown" 
+TP.version = tostring(GetAddOnMetadata(TP.addon, "Version")) or "Unknown"
 TP.author  = GetAddOnMetadata(TP.addon, "Author") or "Unknown"
 
 
@@ -58,19 +58,19 @@ function TP.Button_OnLoad(self)
         version             = TP.version,
         category            = "Information",        -- General, Combat, Information, Interface, Profession
         menuText            = TP.menu_text,         -- Text displayed when the user finds the addon by right clicking on the Titan bar
-        buttonTextFunction  = "", 
+        buttonTextFunction  = "",
         tooltipTitle        = TP.tooltip_header,    -- First line in the tooltip.
-        tooltipTextFunction = "", 
+        tooltipTextFunction = "",
         icon                = "Interface\\Icons\\Ability_Mage_Timewarp",
         iconWidth           = 16,
         savedVariables      = {
             -- SDK : Titan will handle the 3 variables below but the addon code must put it on the menu
             ShowIcon = 1,
             ShowLabelText = 0,
-            ShowColoredText = 0,               
+            ShowColoredText = 0,
         }
     };
-    
+
     self.tooltip = nil;
 
     -- Tell Blizzard the events we need
@@ -117,13 +117,13 @@ function TP.Button_OnEvent(self, event, ...)
         --         print('       ' .. key .. ' -> ' .. value)
         --         if (key ~= 'last') then
         --             local corrected_time = key - (key  % (3600 * 24))
-        -- 
+        --
         --             if (TitanPlayedTimes[name2][corrected_time] == nil) or (TitanPlayedTimes[name2][corrected_time] < value) then
         --                 TitanPlayedTimes[name2][corrected_time] = value
         --             end
         --         else
         --             local corrected_time = value - (value  % (3600 * 24))
-        -- 
+        --
         --             if (TitanPlayedTimes[name2].last == nil) or (TitanPlayedTimes[name2].last < corrected_time) then
         --                 TitanPlayedTimes[name2].last = corrected_time
         --             end
@@ -216,7 +216,7 @@ function TP.Button_OnEvent(self, event, ...)
                 local minutes = (modulo_hours - seconds) / 60
 
                 local str = ''
-                
+
                 if (days < 10) then str = str .. '0' end
                 str = str .. days .. 'd '
 
@@ -235,7 +235,7 @@ function TP.Button_OnEvent(self, event, ...)
             self.tooltip:SetAutoHideDelay(0.01, self)
             self.tooltip:SmartAnchorTo(self)
             self.tooltip:Show()
-            
+
             must_display_tooltip = false
         end
     end
@@ -249,8 +249,8 @@ end
 -- USE  : _OnClick handler from the XML file
 -- --------------------------------------------------------------------------
 function TP.Button_OnClick(self, button)
-    if self.tooltip then 
-        LibQTip:Release(self.tooltip) 
+    if self.tooltip then
+        LibQTip:Release(self.tooltip)
     end
 end
 
@@ -262,7 +262,7 @@ end
 -- --------------------------------------------------------------------------
 function TP.Button_OnEnter(self)
     if self.tooltip then
-        LibQTip:Release(self.tooltip) 
+        LibQTip:Release(self.tooltip)
     end
 
     must_display_tooltip = true
@@ -271,10 +271,10 @@ end
 
 
 -- --------------------------------------------------------------------------
--- NAME : TitanPanelRightClickMenu_PrepareFooderMenu()
+-- NAME : TitanPanelRightClickMenu_PreparePlayedMenu()
 -- DESC : Display rightclick menu options
 -- --------------------------------------------------------------------------
-function TitanPanelRightClickMenu_PrepareFooderMenu()
+function TitanPanelRightClickMenu_PreparePlayedMenu()
     TitanPanelRightClickMenu_AddTitle(TitanPlugins[TP.id].menuText);
     TitanPanelRightClickMenu_AddCommand(TP.menu_hide, TP.id, TITAN_PANEL_MENU_FUNC_HIDE);
 end
