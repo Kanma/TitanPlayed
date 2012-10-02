@@ -43,12 +43,16 @@ lines = filter(lambda x: len(x) > 0, map(lambda x: x.strip(), input_file.readlin
 input_file.close()
 
 processed_lines = []
+in_array = False
 for line in lines:
     if line == 'TitanPlayedTimes = {':
         line = '{'
     elif line.startswith('}'):
         if processed_lines[-1].endswith(','):
             processed_lines[-1] = processed_lines[-1][:-1]
+        if in_array:
+            line = ']' + line[1:]
+            in_array = False
     elif line.find('=') > 0:
         (name, value) = tuple(map(lambda x: x.strip(), line.split('=')))
         if value.startswith("'") and value.endswith("',"):
@@ -57,6 +61,11 @@ for line in lines:
             line = name[1:-1] + ': ' + value
         elif name.startswith('[') and name.endswith(']'):
             line = '"' + name[1:-1] + '": ' + value
+    elif line.find(', -- ['):
+        if processed_lines[-1].endswith(': {'):
+            processed_lines[-1] = processed_lines[-1][:-1] + '['
+        in_array = True
+        line = line[:line.find(', -- [') + 1]
     processed_lines.append(line)
 
 entries_stringified = ''.join(processed_lines)
@@ -66,13 +75,14 @@ entries = json.loads(entries_stringified)
 # Retrieves a sorted list of all the timestamps in the data file, without missing days
 first_day = None
 last_day = None
+keys_to_ignore = [u'last', u'class', u'money', u'level', u'levels_history']
 for name, details in entries.items():
     if first_day is not None:
         last_day = max(last_day, details['last'])
-        first_day = min(first_day, min(map(lambda x: int(x), filter(lambda x: (x != u'last') and (x != u'class'), details.keys()))))
+        first_day = min(first_day, min(map(lambda x: int(x), filter(lambda x: x not in keys_to_ignore, details.keys()))))
     else:
         last_day = details['last']
-        first_day = min(map(lambda x: int(x), filter(lambda x: (x != u'last') and (x != u'class'), details.keys())))
+        first_day = min(map(lambda x: int(x), filter(lambda x: x not in keys_to_ignore, details.keys())))
 
 timestamps = range(first_day, last_day + 1, 3600 * 24)
 
