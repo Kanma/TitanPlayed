@@ -37,13 +37,6 @@ local current_entry        = nil;
 
 -- ******************************** FUNCTIONS *******************************
 
-local chat_filter = function(frame, event, message, ...)
-    if message:find("Temps de jeu total: ") then
-        return true
-    end
-end
-
-
 -- --------------------------------------------------------------------------
 -- NAME : TitanPlayed.Button_OnLoad()
 -- DESC : Registers the plugin upon it loading
@@ -53,7 +46,6 @@ function TP.Button_OnLoad(self)
 --       This is the critical structure!
 -- SDK : This works because the button inherits from a Titan template. In this case
 --       TitanPanelComboTemplate in the XML.
--- NOTE: LDB (LibDataBroker) type addons are NOT in the scope of this example.
     self.registry = {
         id                  = TP.id,
         version             = TP.version,
@@ -79,8 +71,6 @@ function TP.Button_OnLoad(self)
     self:RegisterEvent("PLAYER_LEAVING_WORLD");
     self:RegisterEvent("PLAYER_LEVEL_UP");
     self:RegisterEvent("TIME_PLAYED_MSG");
-
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", chat_filter);
 end
 
 
