@@ -94,8 +94,6 @@ function TP.Button_OnEvent(self, event, ...)
         local current_time = time()
         current_entry = current_time - (current_time % (3600 * 24))
 
-        -- print("ADDON_LOADED: " .. current_time .. " - " .. current_entry)
-
         if (TitanPlayedTimes[name] == nil) then
             localizedClass, englishClass = UnitClass("player");
             TitanPlayedTimes[name] = {}
@@ -107,35 +105,9 @@ function TP.Button_OnEvent(self, event, ...)
             TitanPlayedTimes[name].last = current_entry
         end
 
-        -- -- Check that entries are correctly formatted
-        -- local copy = TitanPlayedTimes
-        -- TitanPlayedTimes = {}
-        -- for name2, entries in pairs(copy) do
-        --     print('****** ' .. name2)
-        --     TitanPlayedTimes[name2] = {}
-        --     for key, value in pairs(copy[name2]) do
-        --         print('       ' .. key .. ' -> ' .. value)
-        --         if (key ~= 'last') then
-        --             local corrected_time = key - (key  % (3600 * 24))
-        --
-        --             if (TitanPlayedTimes[name2][corrected_time] == nil) or (TitanPlayedTimes[name2][corrected_time] < value) then
-        --                 TitanPlayedTimes[name2][corrected_time] = value
-        --             end
-        --         else
-        --             local corrected_time = value - (value  % (3600 * 24))
-        --
-        --             if (TitanPlayedTimes[name2].last == nil) or (TitanPlayedTimes[name2].last < corrected_time) then
-        --                 TitanPlayedTimes[name2].last = corrected_time
-        --             end
-        --         end
-        --     end
-        -- end
-
     elseif (event == "PLAYER_LEAVING_WORLD") then
         local current_time = time()
         local dest_entry = current_time - (current_time % (3600 * 24))
-
-        -- print("PLAYER_LEAVING_WORLD: " .. current_time .. " - " .. dest_entry .. " - " .. current_entry)
 
         if (dest_entry ~= current_entry) then
             TitanPlayedTimes[name][dest_entry] = TitanPlayedTimes[name][current_entry] + (current_time - reference_time);
@@ -154,8 +126,6 @@ function TP.Button_OnEvent(self, event, ...)
         local current_time = time()
         local dest_entry = current_time - (current_time % (3600 * 24))
 
-        -- print("TIME_PLAYED_MSG: " .. current_time .. " - " .. dest_entry .. " - " .. current_entry)
-
         if (dest_entry ~= current_entry) then
             TitanPlayedTimes[name][dest_entry] = arg1
             TitanPlayedTimes[name][current_entry] = arg1 - (current_time - dest_entry)
@@ -173,11 +143,6 @@ function TP.Button_OnEvent(self, event, ...)
 
             local sorted_keys = {}
             for n, v in pairs(TitanPlayedTimes) do table.insert(sorted_keys, n) end
-
-            -- for index, name in ipairs(sorted_keys) do
-            --     print(name)
-            --     print('   -> ' .. TitanPlayedTimes[name][TitanPlayedTimes[name].last])
-            -- end
 
             table.sort(sorted_keys, function(a,b) return TitanPlayedTimes[a][TitanPlayedTimes[a].last] > TitanPlayedTimes[b][TitanPlayedTimes[b].last] end)
 
