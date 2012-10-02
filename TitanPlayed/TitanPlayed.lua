@@ -102,9 +102,8 @@ function TP.Button_OnEvent(self, event, ...)
             TitanPlayedTimes[name].class = englishClass;
         end
 
-        if (TitanPlayedTimes[name]['level'] == nil) then
-            TitanPlayedTimes[name].level = UnitLevel("player");
-        end
+        TitanPlayedTimes[name].money = GetMoney();
+        TitanPlayedTimes[name].level = UnitLevel("player");
 
         if (TitanPlayedTimes[name]['levels_history'] == nil) then
             TitanPlayedTimes[name].levels_history = {};
@@ -133,6 +132,8 @@ function TP.Button_OnEvent(self, event, ...)
             TitanPlayedTimes[name][current_entry] = TitanPlayedTimes[name][current_entry] + (current_time - reference_time);
             reference_time = current_time;
         end
+
+        TitanPlayedTimes[name].money = GetMoney();
 
     elseif (event == "PLAYER_LEVEL_UP") then
         TitanPlayedTimes[name].level = arg1;
