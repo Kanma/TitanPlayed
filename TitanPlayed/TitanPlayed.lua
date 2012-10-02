@@ -77,6 +77,7 @@ function TP.Button_OnLoad(self)
     -- Tell Blizzard the events we need
     self:RegisterEvent("ADDON_LOADED");
     self:RegisterEvent("PLAYER_LEAVING_WORLD");
+    self:RegisterEvent("PLAYER_LEVEL_UP");
     self:RegisterEvent("TIME_PLAYED_MSG");
 
     ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", chat_filter);
@@ -101,6 +102,18 @@ function TP.Button_OnEvent(self, event, ...)
             TitanPlayedTimes[name].class = englishClass;
         end
 
+        if (TitanPlayedTimes[name]['level'] == nil) then
+            TitanPlayedTimes[name].level = UnitLevel("player");
+        end
+
+        if (TitanPlayedTimes[name]['levels_history'] == nil) then
+            TitanPlayedTimes[name].levels_history = {};
+        end
+
+		for i = table.getn(TitanPlayedTimes[name].levels_history) + 1, TitanPlayedTimes[name].level do
+            TitanPlayedTimes[name].levels_history[i] = 0;
+        end
+
         if (TitanPlayedTimes[name][current_entry] == nil) then
             TitanPlayedTimes[name][current_entry] = 0;
             TitanPlayedTimes[name].last = current_entry;
@@ -120,6 +133,10 @@ function TP.Button_OnEvent(self, event, ...)
             TitanPlayedTimes[name][current_entry] = TitanPlayedTimes[name][current_entry] + (current_time - reference_time);
             reference_time = current_time;
         end
+
+    elseif (event == "PLAYER_LEVEL_UP") then
+        TitanPlayedTimes[name].level = arg1;
+        TitanPlayedTimes[name].levels_history[arg1] = time();
 
     elseif (event == "TIME_PLAYED_MSG") then
         local arg1, arg2 = ...;
