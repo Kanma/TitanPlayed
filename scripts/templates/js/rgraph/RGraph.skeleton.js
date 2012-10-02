@@ -167,6 +167,7 @@
             'chart.title.yaxis.bold':       true,
             'chart.title.yaxis.size':       null,
             'chart.title.yaxis.font':       null,
+            'chart.title.yaxis.color':      null,
             'chart.title.xaxis.pos':        null,
             'chart.title.yaxis.pos':        null,
             'chart.title.yaxis.position':   'left',
@@ -401,5 +402,59 @@
             ) {
 
             return this;
+        }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed. This particular
+    * example is taken from the Line chart.
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.Skeleton.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var coordX     = obj.coords[tooltip.__index__][0];
+        var coordY     = obj.coords[tooltip.__index__][1];
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = parseInt(tooltip.style.top) - 9 + 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+        
+        // LEFT edge
+        if ((canvasXY[0] + coordX - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.5)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
         }
     }

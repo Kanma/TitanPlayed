@@ -39,6 +39,9 @@
         // Call them initially
         ModalDialog.Resize();
         
+        if (typeof(ModalDialog.onmodaldialog) == 'function') {
+            ModalDialog.onmodaldialog();
+        }
         ModalDialog.FireCustomEvent('onmodaldialog');
     }
     

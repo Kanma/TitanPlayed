@@ -11,7 +11,7 @@
     * |                      http://www.rgraph.net/LICENSE.txt                       |
     * o------------------------------------------------------------------------------o
     */
-    
+
     if (typeof(RGraph) == 'undefined') RGraph = {};
     
     /**
@@ -193,7 +193,7 @@
         
         if (typeof(max) == 'number') {
             this.max   = max;
-            this.scale = [((max - min) * 0.2) + min,((max - min) * 0.4) + min,((max - min) * 0.6) + min,((max - min) * 0.8) + min,((max - min) * 1.0) + min,];
+            this.scale = [((max - min) * 0.2) + min,((max - min) * 0.4) + min,((max - min) * 0.6) + min,((max - min) * 0.8) + min,((max - min) * 1.0) + min];
             
         } else {
 
@@ -310,7 +310,7 @@
             //this.context.moveTo(this.centerx + i, this.centery);
     
             // Radius must be greater than 0 for Opera to work
-            this.context.arc(this.centerx, this.centery, i, 0, (2 * Math.PI), 0);
+            this.context.arc(this.centerx, this.centery, i, 0, TWOPI, 0);
         }
         this.context.stroke();
 
@@ -378,7 +378,7 @@
 
             var d1 = data[i][0];
             var d2 = data[i][1];
-            var a   = d1 / (180 / Math.PI); // RADIANS
+            var a   = d1 / (180 / PI); // RADIANS
             var r   = ( (d2 - this.Get('chart.ymin')) / (this.max - this.Get('chart.ymin')) ) * this.radius;
             var x   = Math.sin(a) * r;
             var y   = Math.cos(a) * r;
@@ -594,9 +594,9 @@
     {
         var canvas      = e.target;
         var context     = this.context;
-        var mouseCoords = RGraph.getMouseXY(e);
-        var mouseX      = mouseCoords[0];
-        var mouseY      = mouseCoords[1];
+        var mouseXY     = RGraph.getMouseXY(e);
+        var mouseX      = mouseXY[0];
+        var mouseY      = mouseXY[1];
         var overHotspot = false;
         var offset      = this.Get('chart.tooltips.hotspot'); // This is how far the hotspot extends
 
@@ -688,4 +688,76 @@
 
             return this;
         }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.Rscatter.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var coordX     = obj.coords[tooltip.__index__][0];
+        var coordY     = obj.coords[tooltip.__index__][1];
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = parseInt(tooltip.style.top) - 7 + 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+        
+        // LEFT edge
+        if ((canvasXY[0] + coordX - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.5)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
+        }
+    }
+
+
+
+    /**
+    * This function returns the radius (ie the distance from the center) for a particular
+    * value.
+    * 
+    * @param number value The value you want the radius for
+    */
+    RGraph.Rscatter.prototype.getRadius = function (value)
+    {
+        if (value < 0 || value > this.max) {
+            return null;
+        }
+        
+        var r = (value / this.max) * this.radius;
+        
+        return r;
     }

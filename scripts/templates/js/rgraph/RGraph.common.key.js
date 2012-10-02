@@ -34,7 +34,7 @@
         */
         var keypos   = obj.Get('chart.key.position');
         var textsize = obj.Get('chart.text.size');
-        
+
         /**
         * Change the older chart.key.vpos to chart.key.position.y
         */
@@ -185,25 +185,26 @@
             context.fillStyle   = obj.Get('chart.key.background');
             context.strokeStyle = 'black';
 
-
-        if (arguments[3] != false) {
-
-            context.lineWidth = typeof(obj.Get('chart.key.linewidth')) == 'number' ? obj.Get('chart.key.linewidth') : 1;
-
-            // The older square rectangled key
-            if (obj.Get('chart.key.rounded') == true) {
-                context.beginPath();
-                    context.strokeStyle = strokestyle;
-                    RGraph.strokedCurvyRect(context, AA(this, hpos), AA(this, vpos), width - 5, 5 + ( (text_size + 5) * RGraph.getKeyLength(key)),4);
-        
-                context.stroke();
-                context.fill();
-        
-                RGraph.NoShadow(obj);
-        
-            } else {
-                context.strokeRect(AA(this, hpos), AA(this, vpos), width - 5, 5 + ( (text_size + 5) * RGraph.getKeyLength(key)));
-                context.fillRect(AA(this, hpos), AA(this, vpos), width - 5, 5 + ( (text_size + 5) * RGraph.getKeyLength(key)));
+        if (typeof(obj.Get('chart.key.position.graph.boxed')) == 'undefined' || (typeof(obj.Get('chart.key.position.graph.boxed')) == 'boolean' && obj.Get('chart.key.position.graph.boxed')) ) {
+            if (arguments[3] != false) {
+    
+                context.lineWidth = typeof(obj.Get('chart.key.linewidth')) == 'number' ? obj.Get('chart.key.linewidth') : 1;
+    
+                // The older square rectangled key
+                if (obj.Get('chart.key.rounded') == true) {
+                    context.beginPath();
+                        context.strokeStyle = strokestyle;
+                        RGraph.strokedCurvyRect(context, AA(this, hpos), AA(this, vpos), width - 5, 5 + ( (text_size + 5) * RGraph.getKeyLength(key)),4);
+            
+                    context.stroke();
+                    context.fill();
+            
+                    RGraph.NoShadow(obj);
+            
+                } else {
+                    context.strokeRect(AA(this, hpos), AA(this, vpos), width - 5, 5 + ( (text_size + 5) * RGraph.getKeyLength(key)));
+                    context.fillRect(AA(this, hpos), AA(this, vpos), width - 5, 5 + ( (text_size + 5) * RGraph.getKeyLength(key)));
+                }
             }
         }
 
@@ -358,10 +359,11 @@
                                 if (obj.coords2 &&obj.coords2[index] &&obj.coords2[index].length) {
                                     for (var j=0; j<obj.coords2[index].length; ++j) {
                                         
-                                        var x = obj.coords2[index][j][0];
-                                        var y = obj.coords2[index][j][1];
+                                        var x     = obj.coords2[index][j][0];
+                                        var y     = obj.coords2[index][j][1];
+                                        var prevY = obj.coords2[index][j - 1] && obj.coords2[index][j - 1][1]
                                     
-                                        if (j == 0) {
+                                        if (j == 0 || y == null || prevY == null) {
                                             obj.context.moveTo(x, y);
                                         } else {
                                             obj.context.lineTo(x, y);
@@ -450,74 +452,76 @@
                         var mouseXY = RGraph.getMouseXY(e);
                         var mouseX  = mouseXY[0];
                         var mouseY  = mouseXY[1];
-                        
-                        for (var i=0; i<obj.coords.key.length; ++i) {
 
-                            var index = obj.coords.key.length - i - 1;
-
-                            var px = obj.coords.key[i][0];
-                            var py = obj.coords.key[i][1];
-                            var pw = obj.coords.key[i][2];
-                            var ph = obj.coords.key[i][3];
+                        if (obj.coords.key && obj.coords.key.length) {
+                            for (var i=0; i<obj.coords.key.length; ++i) {
     
-                            if (mouseX >= (px - 2) && mouseX <= (px + pw + 2) && mouseY >= (py - 2) && mouseY <= (py + ph + 2)) {
-                            
-                                RGraph.RedrawCanvas(obj.canvas);
-
-                                // First cover the canvas in a semi-transparent layer
-                                obj.context.beginPath();
-                                    obj.context.fillStyle = 'rgba(255,255,255,0.9)';
-                                    obj.context.fillRect(0,0,obj.canvas.width,obj.canvas.height);
-                                obj.context.fill();
-                                
-                                // Highllight the segment
-                                var segment = obj.angles[index];
-                                
-                                obj.context.beginPath();
-                                    RGraph.SetShadow(obj,'gray',0,0,15);
-                                    obj.context.fillStyle = obj.Get('chart.colors')[index];
-                                    obj.context.moveTo(obj.angles[index][2], obj.angles[index][3]);
-                                    obj.context.arc(obj.angles[index][2], obj.angles[index][3], obj.radius, segment[0], segment[1], false);
-                                obj.context.closePath();
-                                obj.context.fill();
-
-                                // Highlight the key
-                                obj.context.lineWidth  = 1;
-                                obj.context.beginPath();
-                                    obj.context.strokeStyle = 'black';
-                                    obj.context.fillStyle   = 'white';
-                                    
-                                    RGraph.SetShadow(obj, 'rgba(0,0,0,0.5)', 0,0,10);
+                                var index = obj.coords.key.length - i - 1;
+    
+                                var px = obj.coords.key[i][0];
+                                var py = obj.coords.key[i][1];
+                                var pw = obj.coords.key[i][2];
+                                var ph = obj.coords.key[i][3];
         
-                                    obj.context.strokeRect(px - 2, py - 2, pw + 4, ph + 4);
-                                    obj.context.fillRect(px - 2, py - 2, pw + 4, ph + 4);
-                                obj.context.stroke();
-                                obj.context.fill();
+                                if (mouseX >= (px - 2) && mouseX <= (px + pw + 2) && mouseY >= (py - 2) && mouseY <= (py + ph + 2)) {
                                 
-                                // Turn off the shadow again
-                                RGraph.NoShadow(obj);
-
-                                // Add the blob of color
-                                obj.context.beginPath();
-                                    obj.context.fillStyle = obj.Get('chart.colors')[index];
-                                    obj.context.fillRect(px, py, blob_size, blob_size);
-                                obj.context.fill();
+                                    RGraph.RedrawCanvas(obj.canvas);
     
-                                // And add the text
-                                obj.context.beginPath();
-                                    obj.context.fillStyle = obj.Get('chart.text.color');
-                                
-                                    RGraph.Text(obj.context,
-                                                obj.Get('chart.text.font'),
-                                                obj.Get('chart.text.size'),
-                                                px + 5 + blob_size,
-                                                py + ph,
-                                                obj.Get('chart.key')[obj.Get('chart.key').length - i - 1]
-                                               );
-                                context.fill();
-
-                                e.stopPropagation();
-                                return;
+                                    // First cover the canvas in a semi-transparent layer
+                                    obj.context.beginPath();
+                                        obj.context.fillStyle = 'rgba(255,255,255,0.9)';
+                                        obj.context.fillRect(0,0,obj.canvas.width,obj.canvas.height);
+                                    obj.context.fill();
+                                    
+                                    // Highllight the segment
+                                    var segment = obj.angles[index];
+                                    
+                                    obj.context.beginPath();
+                                        RGraph.SetShadow(obj,'gray',0,0,15);
+                                        obj.context.fillStyle = obj.Get('chart.colors')[index];
+                                        obj.context.moveTo(obj.angles[index][2], obj.angles[index][3]);
+                                        obj.context.arc(obj.angles[index][2], obj.angles[index][3], obj.radius, segment[0], segment[1], false);
+                                    obj.context.closePath();
+                                    obj.context.fill();
+    
+                                    // Highlight the key
+                                    obj.context.lineWidth  = 1;
+                                    obj.context.beginPath();
+                                        obj.context.strokeStyle = 'black';
+                                        obj.context.fillStyle   = 'white';
+                                        
+                                        RGraph.SetShadow(obj, 'rgba(0,0,0,0.5)', 0,0,10);
+            
+                                        obj.context.strokeRect(px - 2, py - 2, pw + 4, ph + 4);
+                                        obj.context.fillRect(px - 2, py - 2, pw + 4, ph + 4);
+                                    obj.context.stroke();
+                                    obj.context.fill();
+                                    
+                                    // Turn off the shadow again
+                                    RGraph.NoShadow(obj);
+    
+                                    // Add the blob of color
+                                    obj.context.beginPath();
+                                        obj.context.fillStyle = obj.Get('chart.colors')[index];
+                                        obj.context.fillRect(px, py, blob_size, blob_size);
+                                    obj.context.fill();
+        
+                                    // And add the text
+                                    obj.context.beginPath();
+                                        obj.context.fillStyle = obj.Get('chart.text.color');
+                                    
+                                        RGraph.Text(obj.context,
+                                                    obj.Get('chart.text.font'),
+                                                    obj.Get('chart.text.size'),
+                                                    px + 5 + blob_size,
+                                                    py + ph,
+                                                    obj.Get('chart.key')[obj.Get('chart.key').length - i - 1]
+                                                   );
+                                    context.fill();
+    
+                                    e.stopPropagation();
+                                    return;
+                                }
                             }
                         }
                     }
@@ -550,14 +554,14 @@
         var gutterTop    = obj.Get('chart.gutter.top');
         var gutterBottom = obj.Get('chart.gutter.bottom');
 
-        var hpos        = RGraph.GetWidth(obj) / 2;
-        var vpos        = (gutterTop / 2) - 5;
+        var hpos        = obj.canvas.width / 2;
+        var vpos        = gutterTop - text_size - 5;
         var title       = obj.Get('chart.title');
         var blob_size   = text_size; // The blob of color
         var hmargin      = 8; // This is the size of the gaps between the blob of color and the text
         var vmargin      = 4; // This is the vertical margin of the key
         var fillstyle   = obj.Get('chart.key.background');
-        var strokestyle = 'black';
+        var strokestyle = '#999';
         var length      = 0;
 
 

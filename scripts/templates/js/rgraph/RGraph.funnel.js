@@ -50,13 +50,14 @@
         * The funnel charts properties
         */
         this.properties = {
-            'chart.strokestyle':           'black',
+            'chart.strokestyle':           'transparent',
             'chart.gutter.left':           25,
             'chart.gutter.right':          25,
             'chart.gutter.top':            25,
             'chart.gutter.bottom':         25,
             'chart.labels':                null,
             'chart.labels.sticks':         false,
+            'chart.labels.x':              null,
             'chart.title':                 '',
             'chart.title.background':       null,
             'chart.title.hpos':             null,
@@ -75,7 +76,7 @@
             'chart.shadow.blur':           3,
             'chart.shadow.offsetx':        3,
             'chart.shadow.offsety':        3,
-            'chart.key':                    [],
+            'chart.key':                    null,
             'chart.key.background':         'white',
             'chart.key.position':           'graph',
             'chart.key.halign':             'right',
@@ -115,7 +116,7 @@
             'chart.zoom.background':        true,
             'chart.zoom.action':            'zoom',
             'chart.resizable':              false,
-            'chart.taper':                  true,
+            'chart.taper':                  false,
             'chart.events.click':           null,
             'chart.events.mousemove':       null
         }
@@ -178,7 +179,7 @@
 
         RGraph.DrawTitle(this, this.Get('chart.title'), this.gutterTop, null, this.Get('chart.title.size') ? this.Get('chart.title.size') : this.Get('chart.text.size') + 2);
         this.DrawFunnel();
-        
+
         
         /**
         * Setup the context menu if required
@@ -241,9 +242,7 @@
             context.shadowOffsetY = this.Get('chart.shadow.offsety');
         }
 
-        for (i=0; i<this.data.length; ++i) {
-
-            i = Number(i);
+        for (i=0; i<(this.data.length); ++i) {
 
             var firstvalue = this.data[0];
             var firstwidth = (firstvalue / total) * width;
@@ -251,49 +250,24 @@
             var curwidth   = (curvalue / total) * width;
             var curheight  = height / this.data.length;
             var halfCurWidth = (curwidth / 2);
-            var nextvalue  = this.data[i + 1] ?  this.data[i + 1] : 0;
-            var nextwidth  = this.data[i + 1] ? (nextvalue / total) * width : 0;
+            var nextvalue  = this.data[i + 1];
+            var nextwidth  = this.data[i + 1] ? (nextvalue / total) * width : null;
             var halfNextWidth = (nextwidth / 2);
-            var center     = this.gutterLeft + (firstwidth / 2);
+            var center        = this.gutterLeft + (firstwidth / 2);
 
-            /**
-            * First segment
-            */
-            if (i == 0) {
-                var x1 = center - halfCurWidth;
-                var y1 = this.gutterTop;
-                var x2 = center + halfCurWidth;
-                var y2 = this.gutterTop;
-                var x3 = center + halfNextWidth;
-                var y3 = accheight + curheight;
-                var x4 = center - halfNextWidth;
-                var y4 = accheight + curheight;
-
-            /**
-            * Subsequent segments
-            */
-            } else if (this.Get('chart.taper') || i < (this.data.length - 1)) {
-                var x1 = center - halfCurWidth;
-                var y1 = accheight;
-                var x2 = center + halfCurWidth;
-                var y2 = accheight;
-                var x3 = center + halfNextWidth;
-                var y3 = accheight + curheight;
-                var x4 = center - halfNextWidth;
-                var y4 = accheight + curheight;
-            }
-
-            /**
-            * Set the fill colour. If i is over 0 then don't use an offset
-            */
-            if (document.all && this.Get('chart.shadow')) {
-                this.DrawIEShadow([x1, y1, x2, y2, x3, y3, x4, y4], i > 0 && this.Get('chart.shadow.offsety') < 0);
-            }
+            var x1 = center - halfCurWidth;
+            var y1 = accheight;
+            var x2 = center + halfCurWidth;
+            var y2 = accheight;
+            var x3 = center + halfNextWidth;
+            var y3 = accheight + curheight;
+            var x4 = center - halfNextWidth;
+            var y4 = accheight + curheight;
 
             context.strokeStyle = this.Get('chart.strokestyle');
             context.fillStyle   = this.Get('chart.colors')[i];
 
-            if (this.Get('chart.taper') || (i < this.data.length - 1) ) {
+            if (nextwidth && i < this.data.length - 1) {
 
                 context.beginPath();
                     context.moveTo(x1, y1);
@@ -452,38 +426,6 @@
 
 
     /**
-    * This function is used by MSIE only to manually draw the shadow
-    * 
-    * @param array coords The coords for the bar
-    */
-    RGraph.Funnel.prototype.DrawIEShadow = function (coords, noOffset)
-    {
-        var prevFillStyle = this.context.fillStyle;
-        var offsetx = this.Get('chart.shadow.offsetx');
-        var offsety = this.Get('chart.shadow.offsety');
-        var context = this.context;
-
-        context.lineWidth = 1;
-        context.fillStyle = this.Get('chart.shadow.color');
-        
-        // Draw the shadow
-        context.beginPath();
-            context.moveTo(coords[0] + (noOffset ? 0 : offsetx), coords[1] + (noOffset ? 0 : offsety));
-            context.lineTo(coords[2] + (noOffset ? 0 : offsetx), coords[3] + (noOffset ? 0 : offsety));
-            context.lineTo(coords[4] + (noOffset ? 0 : offsetx), coords[5] + (noOffset ? 0 : offsety));
-            context.lineTo(coords[6] + (noOffset ? 0 : offsetx), coords[7] + (noOffset ? 0 : offsety));
-        context.closePath();
-        
-        context.fill();
-        
-
-        
-        // Change the fillstyle back to what it was
-        this.context.fillStyle = prevFillStyle;
-    }
-
-
-    /**
     * Gets the appropriate segment that has been highlighted
     */
     RGraph.Funnel.prototype.getShape =
@@ -596,5 +538,70 @@
             ) {
 
             return this;
+        }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.Funnel.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var coords = obj.coords[tooltip.__index__];
+
+        var x1 = coords[0];
+        var y1 = coords[1];
+        var x2 = coords[2];
+        var y2 = coords[3];
+        var x3 = coords[4];
+        var y3 = coords[5];
+        var x4 = coords[6];
+        var y4 = coords[7];
+        
+        var coordW     = x2 - x1;
+        var coordX     = x1 + (coordW / 2);
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+        var height     = tooltip.offsetHeight;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = canvasXY[1] + y1 - height - 7 + ((y3 - y2) / 2) + 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+
+        // LEFT edge
+        if ((canvasXY[0] + coordX - (width / 2)) < 5) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX - (width / 2)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
         }
     }

@@ -27,6 +27,14 @@
         window.onmousedown = function (e)
         {
             /**
+            * For firefox add the window.event object
+            */
+            if (navigator.userAgent.indexOf('Firefox') >= 0) window.event = e;
+            
+            e = RGraph.FixEventObject(e);
+
+
+            /**
             * First fire the user specified window.onmousedown_rgraph listener if there is any.
             */
 
@@ -73,6 +81,14 @@
     {
         window.onmouseup = function (e)
         {
+            /**
+            * For firefox add the window.event object
+            */
+            if (navigator.userAgent.indexOf('Firefox') >= 0) window.event = e;
+            
+            e = RGraph.FixEventObject(e);
+
+
             /**
             * Stop any annotating that may be going on
             */
@@ -134,8 +150,8 @@
 
 
     /**
-    * This is the canvas click event listener. It installs the click event for the
-    * canvas. The click event then checks the relevant object.
+    * This is the canvas mouseup event listener. It installs the mouseup event for the
+    * canvas. The mouseup event then checks the relevant object.
     * 
     * @param object obj The chart object
     */
@@ -143,6 +159,14 @@
     {
         obj.canvas.onmouseup = function (e)
         {
+            /**
+            * For firefox add the window.event object
+            */
+            if (navigator.userAgent.indexOf('Firefox') >= 0) window.event = e;
+
+            e = RGraph.FixEventObject(e);
+
+
             /**
             * First fire the user specified onmouseup listener if there is any
             */
@@ -176,10 +200,15 @@
 
                                 var type = shape['object'].type;
 
-                                if (type == 'line' || type == 'rscatter' || (type == 'scatter' && !obj.Get('chart.boxplot')) || type == 'radar') {
+                                if (   type == 'line'
+                                    || type == 'rscatter'
+                                    || (type == 'scatter' && !obj.Get('chart.boxplot'))
+                                    || type == 'radar') {
+
                                     var canvasXY = RGraph.getCanvasXY(obj.canvas);
                                     var x = canvasXY[0] + shape['x'];
                                     var y = canvasXY[1] + shape['y'];
+
                                 } else {
                                     var x = e.pageX;
                                     var y = e.pageY;
@@ -193,11 +222,16 @@
                                 RGraph.Clear(obj.canvas);
                                 RGraph.Redraw();
                                 obj.Highlight(shape);
-                                RGraph.Tooltip(obj, text, x, y, shape['index']);
-                                
+                                RGraph.Registry.Set('chart.tooltip.shape', shape);
+                                RGraph.Tooltip(obj, text, x, y, shape['index'], e);
+
                                 // Add the shape that triggered the tooltip
-                                RGraph.Registry.Get('chart.tooltip').__shape__ = shape;
-    
+                                if (RGraph.Registry.Get('chart.tooltip')) {
+                                    RGraph.Registry.Get('chart.tooltip').__shape__ = shape;
+
+                                    RGraph.EvaluateCursor(e);
+                                }
+
                                 e.cancelBubble = true;
                                 e.stopPropagation();
                                 return false;
@@ -229,9 +263,14 @@
     {
         obj.canvas.onmousemove = function (e)
         {
-            if (!e) {
-                e = RGraph.FixEventObject(window.event);
-            }
+            /**
+            * For firefox add the window.event object
+            */
+            if (navigator.userAgent.indexOf('Firefox') >= 0) window.event = e;
+            
+            e = RGraph.FixEventObject(e);
+
+
 
             /**
             * First fire the user specified onmousemove listener if there is any
@@ -247,22 +286,31 @@
             */
             var objects = RGraph.ObjectRegistry.getObjectsByXY(e);
 
-            if (objects) {
+            if (objects && objects.length) {
                 for (var i=0; i<objects.length; ++i) {
 
                     var obj = objects[i];
                     var id  = obj.id;
+                    
+                    if (!obj.getShape) {
+                        continue;
+                    }
+
+
+                    var shape = obj.getShape(e);
+
+
+
 
                     // ================================================================================================ //
                     // This facilitates the chart.events.mousemove option
                     // ================================================================================================ //
                     
-                    if (!obj.getShape) {
-                        continue;
-                    }
+                    var func = obj.Get('chart.events.mousemove');
                     
-                    var func  = obj.Get('chart.events.mousemove');
-                    var shape = obj.getShape(e);
+                    if (!func && typeof(obj.onmousemove) == 'function') {
+                        func = obj.onmousemove;
+                    }
 
                     /**
                     * This bit saves the current pointer style if there isn't one already saved
@@ -273,6 +321,8 @@
                         }
         
                         func(e, shape);
+                        
+                        return;
         
                     } else if (typeof(obj.Get('chart.events.mousemove.revertto')) == 'string') {
         
@@ -296,7 +346,7 @@
                         RGraph.Clear(obj.canvas);
                         RGraph.Redraw();
                         obj.canvas.onmouseup(e);
-                        
+
                         return;
                     }
         
@@ -320,7 +370,6 @@
                     }
                 }
             }
-
 
             // ================================================================================================ //
             // Crosshairs
@@ -370,6 +419,14 @@
     {
         obj.canvas.onmousedown = function (e)
         {
+            /**
+            * For firefox add the window.event object
+            */
+            if (navigator.userAgent.indexOf('Firefox') >= 0) window.event = e;
+            
+            e = RGraph.FixEventObject(e);
+
+
             /**
             * First fire the user specified onmousedown listener if there is any
             */
@@ -465,6 +522,14 @@
         obj.canvas.onclick = function (e)
         {
             /**
+            * For firefox add the window.event object
+            */
+            if (navigator.userAgent.indexOf('Firefox') >= 0) window.event = e;
+            
+            e = RGraph.FixEventObject(e);
+
+
+            /**
             * First fire the user specified onmousedown listener if there is any
             */
             if (typeof(e.target.onclick_rgraph) == 'function') {
@@ -483,6 +548,10 @@
                 * This bit saves the current pointer style if there isn't one already saved
                 */
                 var func = obj.Get('chart.events.click');
+                
+                if (!func && typeof(obj.onclick) == 'function') {
+                    func = obj.onclick;
+                }
 
                 if (shape && typeof(func) == 'function') {
                     func(e, shape);
@@ -494,6 +563,18 @@
                     */
                     return;
                 }
+
+                /**
+                * The property takes priority over this. If the property doesn't exist try
+                * the $ function
+                */
+                //if (shape) {
+                //    var func = obj['$' + shape['index']].onclick;
+                //    
+                //    if (typeof(func) == 'function') {
+                //        func(e, shape);
+                //    }
+                //}
             }
         }
     }
@@ -513,7 +594,7 @@
         * Tooltips cause the mouse pointer to change
         */
         var objects = RGraph.ObjectRegistry.getObjectsByXY(e);
-        
+
         for (var i=0; i<objects.length; ++i) {
 
             var obj = objects[i]
@@ -521,15 +602,20 @@
 
             if (!RGraph.is_null(obj)) {
                 if (obj.getShape && obj.getShape(e)) {
-                    
+
                     var shape = obj.getShape(e);
-    
+
                     if (obj.Get('chart.tooltips')) {
-    
+
                         var text = RGraph.parseTooltipText(obj.Get('chart.tooltips'), shape['index']);
                         
+                        if (!text && shape['object'].type == 'scatter' && shape['index_adjusted']) {
+                            text = RGraph.parseTooltipText(obj.Get('chart.tooltips'), shape['index_adjusted']);
+                        }
+
                         if (text) {
                             var pointer = true;
+
                         }
                     }
                 }

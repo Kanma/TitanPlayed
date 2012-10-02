@@ -46,14 +46,17 @@
         this.angles  = [];
         
         this.properties = {
+            'chart.background.axes':        true,
+            'chart.background.axes.color':  'black',
+            'chart.background.grid.spokes': null,
             'chart.centerx':                null,
             'chart.centery':                null,
             'chart.radius':                 null,
-            'chart.colors':                 ['red', 'rgb(0,255,255)', 'rgb(0,255,0)', 'gray', 'blue', 'rgb(255,128,255)','green', 'pink', 'gray', 'aqua'],
+            'chart.colors':                 ['rgba(255,0,0,0.5)', 'rgba(255,255,0,0.5)', 'rgba(0,255,255,0.5)', 'rgb(0,255,0)', 'gray', 'blue', 'rgb(255,128,255)','green', 'pink', 'gray', 'aqua'],
             'chart.colors.sequential':      false,
             'chart.colors.alpha':           null,
             'chart.margin':                 0,
-            'chart.strokestyle':            'rgba(0,0,0,0.5)',
+            'chart.strokestyle':            '#aaa',
             'chart.gutter.left':            25,
             'chart.gutter.right':           25,
             'chart.gutter.top':             25,
@@ -117,10 +120,12 @@
             'chart.scale.point':            '.',
             'chart.scale.thousand':         ',',
             'chart.variant':                'stacked',
-            'chart.animation.grow.factor':  1,
+            'chart.animation.roundrobin.factor':  1,
+            'chart.animation.roundrobin.radius': true,
             'chart.exploded':               0,
             'chart.events.mousemove':       null,
-            'chart.events.click':           null
+            'chart.events.click':           null,
+            'chart.animation.grow.multiplier': 1
         }
 
 
@@ -252,60 +257,80 @@
             //this.context.moveTo(this.centerx + i, this.centery);
 
             // Radius must be greater than 0 for Opera to work
-            this.context.arc(this.centerx, this.centery, i, 0, (2 * Math.PI), 0);
+            this.context.arc(this.centerx, this.centery, i, 0, TWOPI, 0);
         }
         this.context.stroke();
 
         // Draw the background lines that go from the center outwards
         this.context.beginPath();
-        for (var i=15; i<360; i+=15) {
-        
-            // Radius must be greater than 0 for Opera to work
-            this.context.arc(this.centerx, this.centery, this.radius, i / 57.3, (i + 0.1) / 57.3, 0); // The 0.1 avoids a bug in Chrome 6
-        
-            this.context.lineTo(this.centerx, this.centery);
-        }
+            if (typeof(this.Get('chart.background.grid.spokes')) == 'number') {
+                
+                var num = (360 / this.Get('chart.background.grid.spokes'));
+
+                for (var i=num; i<360; i+=num) {
+                
+                    // Radius must be greater than 0 for Opera to work
+                    this.context.arc(this.centerx,
+                                     this.centery,
+                                     this.radius,
+                                     i / (180 / PI),
+                                     (i + 0.0001) / (180 / PI),
+                                     0);
+
+                    this.context.lineTo(this.centerx, this.centery);
+                }
+            } else {
+                for (var i=15; i<360; i+=15) {
+                
+                    // Radius must be greater than 0 for Opera to work
+                    this.context.arc(this.centerx, this.centery, this.radius, i / (180/ PI), (i + 0.0001) / (180/ PI), 0); // The 0.1 avoids a bug in Chrome 6
+                
+                    this.context.lineTo(this.centerx, this.centery);
+                }
+            }
         this.context.stroke();
         
-        this.context.beginPath();
-        this.context.strokeStyle = 'black';
-    
-        // Draw the X axis
-        this.context.moveTo(this.centerx - this.radius, AA(this, this.centery) );
-        this.context.lineTo(this.centerx + this.radius, AA(this, this.centery) );
-    
-        // Draw the X ends
-        this.context.moveTo(AA(this, this.centerx - this.radius), this.centery - 5);
-        this.context.lineTo(AA(this, this.centerx - this.radius), this.centery + 5);
-        this.context.moveTo(AA(this, this.centerx + this.radius), this.centery - 5);
-        this.context.lineTo(AA(this, this.centerx + this.radius), this.centery + 5);
+        if (this.Get('chart.background.axes')) {
+            this.context.beginPath();
+            this.context.strokeStyle = this.Get('chart.background.axes.color');
         
-        // Draw the X check marks
-        for (var i=(this.centerx - this.radius); i<(this.centerx + this.radius); i+=20) {
-            this.context.moveTo(AA(this, i),  this.centery - 3);
-            this.context.lineTo(AA(this, i),  this.centery + 3.5);
+            // Draw the X axis
+            this.context.moveTo(this.centerx - this.radius, AA(this, this.centery) );
+            this.context.lineTo(this.centerx + this.radius, AA(this, this.centery) );
+        
+            // Draw the X ends
+            this.context.moveTo(AA(this, this.centerx - this.radius), this.centery - 5);
+            this.context.lineTo(AA(this, this.centerx - this.radius), this.centery + 5);
+            this.context.moveTo(AA(this, this.centerx + this.radius), this.centery - 5);
+            this.context.lineTo(AA(this, this.centerx + this.radius), this.centery + 5);
+            
+            // Draw the X check marks
+            for (var i=(this.centerx - this.radius); i<(this.centerx + this.radius); i+=20) {
+                this.context.moveTo(AA(this, i),  this.centery - 3);
+                this.context.lineTo(AA(this, i),  this.centery + 3.5);
+            }
+            
+            // Draw the Y check marks
+            for (var i=(this.centery - this.radius); i<(this.centery + this.radius); i+=20) {
+                this.context.moveTo(this.centerx - 3, AA(this, i));
+                this.context.lineTo(this.centerx + 3, AA(this, i));
+            }
+        
+            // Draw the Y axis
+            this.context.moveTo(AA(this, this.centerx), this.centery - this.radius);
+            this.context.lineTo(AA(this, this.centerx), this.centery + this.radius);
+        
+            // Draw the Y ends
+            this.context.moveTo(this.centerx - 5, AA(this, this.centery - this.radius));
+            this.context.lineTo(this.centerx + 5, AA(this, this.centery - this.radius));
+        
+            this.context.moveTo(this.centerx - 5, AA(this, this.centery + this.radius));
+            this.context.lineTo(this.centerx + 5, AA(this, this.centery + this.radius));
+            
+            // Stroke it
+            this.context.closePath();
+            this.context.stroke();
         }
-        
-        // Draw the Y check marks
-        for (var i=(this.centery - this.radius); i<(this.centery + this.radius); i+=20) {
-            this.context.moveTo(this.centerx - 3, AA(this, i));
-            this.context.lineTo(this.centerx + 3, AA(this, i));
-        }
-    
-        // Draw the Y axis
-        this.context.moveTo(AA(this, this.centerx), this.centery - this.radius);
-        this.context.lineTo(AA(this, this.centerx), this.centery + this.radius);
-    
-        // Draw the Y ends
-        this.context.moveTo(this.centerx - 5, AA(this, this.centery - this.radius));
-        this.context.lineTo(this.centerx + 5, AA(this, this.centery - this.radius));
-    
-        this.context.moveTo(this.centerx - 5, AA(this, this.centery + this.radius));
-        this.context.lineTo(this.centerx + 5, AA(this, this.centery + this.radius));
-        
-        // Stroke it
-        this.context.closePath();
-        this.context.stroke();
     }
 
 
@@ -382,9 +407,10 @@
             
             for (var i=0; i<this.data.length; ++i) {
             
-                var segmentRadians = (this.data[i][1] / total) * (2 * Math.PI);
+                var segmentRadians = ((this.data[i][1] / total) * TWOPI);
                 var radius         = ((this.data[i][0] - this.Get('chart.ymin')) / (this.max - this.Get('chart.ymin'))) * (this.radius - 10);
-                
+                    radius = radius * this.properties['chart.animation.grow.multiplier'];
+
                 this.context.strokeStyle = this.Get('chart.strokestyle');
                 this.context.fillStyle = this.Get('chart.colors')[0];
 
@@ -394,8 +420,8 @@
 
                 this.context.beginPath(); // Begin the segment
 
-                    var startAngle = this.startRadians - (Math.PI / 2) + margin;
-                    var endAngle   = this.startRadians + segmentRadians - (Math.PI / 2) - margin;
+                    var startAngle = (this.startRadians * this.Get('chart.animation.roundrobin.factor')) - HALFPI + margin;
+                    var endAngle   = ((this.startRadians + segmentRadians) * this.Get('chart.animation.roundrobin.factor')) - HALFPI - margin;
 
                     var exploded  = this.getexploded(i, startAngle, endAngle, this.Get('chart.exploded'));
                     var explodedX = exploded[0];
@@ -404,7 +430,7 @@
 
                     this.context.arc(this.centerx + explodedX,
                                      this.centery + explodedY,
-                                     radius,
+                                     this.Get('chart.animation.roundrobin.radius') ? radius * this.Get('chart.animation.roundrobin.factor') : radius,
                                      startAngle,
                                      endAngle,
                                      0);
@@ -422,12 +448,15 @@
                                   0,
                                   radius,
                                   this.centerx + explodedX,
-                                  this.centery + explodedY,
+                                  this.centery + explodedY
                                  ]);
 
                 this.startRadians += segmentRadians;
             }
         } else {
+        
+            var sequentialColorIndex = 0;
+        
             /*******************************************************
             * Draw regular segments here
             *******************************************************/
@@ -443,15 +472,16 @@
                     this.context.fillStyle = this.Get('chart.colors')[i];
                 }
 
-                var segmentRadians = (1 / this.data.length) * (2 * Math.PI);
+                var segmentRadians = (1 / this.data.length) * TWOPI;
     
                 if (typeof(this.data[i]) == 'number') {
                     this.context.beginPath(); // Begin the segment
 
                         var radius = ((this.data[i] - this.Get('chart.ymin')) / (this.max - this.Get('chart.ymin'))) * (this.radius - 10);
+                            radius = radius * this.properties['chart.animation.grow.multiplier'];
 
-                        var startAngle = (this.startRadians * this.Get('chart.animation.grow.factor')) - (Math.PI / 2) + margin;
-                        var endAngle   = (this.startRadians * this.Get('chart.animation.grow.factor')) + (segmentRadians) - (Math.PI / 2) - margin;
+                        var startAngle = (this.startRadians * this.Get('chart.animation.roundrobin.factor')) - HALFPI + margin;
+                        var endAngle   = (this.startRadians * this.Get('chart.animation.roundrobin.factor')) + (segmentRadians * this.Get('chart.animation.roundrobin.factor')) - HALFPI - margin;
 
                         var exploded  = this.getexploded(i, startAngle, endAngle, this.Get('chart.exploded'));
                         var explodedX = exploded[0];
@@ -459,7 +489,7 @@
 
                         this.context.arc(this.centerx + explodedX,
                                          this.centery + explodedY,
-                                         radius * this.Get('chart.animation.grow.factor'),
+                                         this.Get('chart.animation.roundrobin.radius') ? radius * this.Get('chart.animation.roundrobin.factor') : radius,
                                          startAngle,
                                          endAngle,
                                          0);
@@ -469,7 +499,7 @@
                     this.context.fill();
 
                     if (endAngle == 0) {
-                        //endAngle = (2 * Math.PI);
+                        //endAngle = TWOPI;
                     }
 
                     // Store the start and end angles
@@ -477,7 +507,7 @@
                                       startAngle,
                                       endAngle,
                                       0,
-                                      radius * this.Get('chart.animation.grow.factor'),
+                                      radius * this.Get('chart.animation.roundrobin.factor'),
                                       this.centerx + explodedX,
                                       this.centery + explodedY
                                      ]);
@@ -487,27 +517,34 @@
                 *******************************************************/
                 } else if (typeof(this.data[i]) == 'object') {
                     
-                    var margin = this.Get('chart.margin') / (180 / Math.PI);
+                    var margin = this.Get('chart.margin') / (180 / PI);
                     
 
                     for (var j=0; j<this.data[i].length; ++j) {
                     
-                        var startAngle = (this.startRadians * this.Get('chart.animation.grow.factor')) - (Math.PI / 2) + margin;
-                        var endAngle  = (this.startRadians * this.Get('chart.animation.grow.factor'))+ segmentRadians - (Math.PI / 2) - margin;
+                        var startAngle = (this.startRadians * this.Get('chart.animation.roundrobin.factor')) - HALFPI + margin;
+                        var endAngle  = (this.startRadians * this.Get('chart.animation.roundrobin.factor'))+ (segmentRadians * this.Get('chart.animation.roundrobin.factor')) - HALFPI - margin;
                     
                         var exploded  = this.getexploded(i, startAngle, endAngle, this.Get('chart.exploded'));
                         var explodedX = exploded[0];
                         var explodedY = exploded[1];
     
                         this.context.fillStyle = this.Get('chart.colors')[j];
+
+                        // This facilitates sequential color support
+                        if (this.Get('chart.colors.sequential')) {
+                            this.context.fillStyle = this.Get('chart.colors')[sequentialColorIndex++];
+                        }
+
                         if (j == 0) {
                             this.context.beginPath(); // Begin the segment
                                 var startRadius = 0;
                                 var endRadius = ((this.data[i][j] - this.Get('chart.ymin')) / (this.max - this.Get('chart.ymin'))) * (this.radius - 10);
+                                    endRadius = endRadius * this.properties['chart.animation.grow.multiplier'];
                     
                                 this.context.arc(this.centerx + explodedX,
                                                  this.centery + explodedY,
-                                                 endRadius * this.Get('chart.animation.grow.factor'),
+                                                 this.Get('chart.animation.roundrobin.radius') ? endRadius * this.Get('chart.animation.roundrobin.factor') : endRadius,
                                                  startAngle,
                                                  endAngle,
                                                  0);
@@ -520,7 +557,7 @@
                                               startAngle,
                                               endAngle,
                                               0,
-                                              endRadius * this.Get('chart.animation.grow.factor'),
+                                              endRadius * this.Get('chart.animation.roundrobin.factor'),
                                               this.centerx + explodedX,
                                               this.centery + explodedY
                                              ]);
@@ -531,17 +568,18 @@
                                 
                                 var startRadius = endRadius; // This comes from the prior iteration of this loop
                                 var endRadius = (((this.data[i][j] - this.Get('chart.ymin')) / (this.max - this.Get('chart.ymin'))) * (this.radius - 10)) + startRadius;
+                                    endRadius = endRadius * this.properties['chart.animation.grow.multiplier'];
                 
                                 this.context.arc(this.centerx + explodedX,
                                                  this.centery + explodedY,
-                                                 startRadius  * this.Get('chart.animation.grow.factor'),
+                                                 startRadius  * this.Get('chart.animation.roundrobin.factor'),
                                                  startAngle,
                                                  endAngle,
                                                  0);
                 
                                 this.context.arc(this.centerx + explodedX,
                                                  this.centery + explodedY,
-                                                 endRadius  * this.Get('chart.animation.grow.factor'),
+                                                 endRadius  * this.Get('chart.animation.roundrobin.factor'),
                                                  endAngle,
                                                  startAngle,
                                                  true);
@@ -553,10 +591,10 @@
                             this.angles.push([
                                               startAngle,
                                               endAngle,
-                                              startRadius * this.Get('chart.animation.grow.factor'),
-                                              endRadius * this.Get('chart.animation.grow.factor'),
+                                              startRadius * this.Get('chart.animation.roundrobin.factor'),
+                                              endRadius * this.Get('chart.animation.roundrobin.factor'),
                                               this.centerx + explodedX,
-                                              this.centery + explodedY,
+                                              this.centery + explodedY
                                              ]);
                         }
                     }
@@ -595,7 +633,7 @@
         }
         
         // Set the color to black
-        this.context.fillStyle = 'black';
+        this.context.fillStyle = this.properties['chart.text.color'];
         this.context.strokeStyle = 'black';
         
         var r          = this.radius - 10;
@@ -668,10 +706,9 @@
         var position = this.Get('chart.labels.position');
         var r        = r + 10 + this.Get('chart.labels.offset');
 
-        for (var i=0; i<labels.length; ++i) {
+        for (var i=0; i<this.angles.length; ++i) {
             
             if (typeof(variant) == 'string' && variant == 'non-equi-angular') {
-
                 var a = Number(this.angles[i][0]) + ((this.angles[i][1] - this.angles[i][0]) / 2);
                 var halign = 'center'; // Default halign
 
@@ -682,8 +719,8 @@
                 
             } else {
 
-                var a = ((2 * Math.PI) / labels.length) * (i + 1) - ((2 * Math.PI) / (labels.length * 2));
-                var a = a - (Math.PI/ 2) + (this.Get('chart.labels.position') == 'edge' ? (((2 * Math.PI) / labels.length) / 2) : 0);
+                var a = (TWOPI / labels.length) * (i + 1) - (TWOPI / (labels.length * 2));
+                var a = a - HALFPI + (this.Get('chart.labels.position') == 'edge' ? ((TWOPI / labels.length) / 2) : 0);
                 var halign = 'center'; // Default halign
     
                 // Horizontal alignment
@@ -757,21 +794,13 @@
             var radiusEnd   = angles[i][3];
             var centerX     = angles[i][4];
             var centerY     = angles[i][5];
-            var mouseCoords = RGraph.getMouseXY(e);
-            var mouseX      = mouseCoords[0] - centerX;
-            var mouseY      = mouseCoords[1] - centerY;
-            var angle       = Math.atan(mouseY / mouseX);
+            var mouseXY     = RGraph.getMouseXY(e);
+            var mouseX      = mouseXY[0] - centerX;
+            var mouseY      = mouseXY[1] - centerY;
 
-
-            /**
-            * Adjust the angle
-            */
-            if (mouseX < 0 && mouseY < 0) {
-                angle += Math.PI;
-            } else if (mouseX > 0 && mouseY < 0) {
-                // ...
-            } else if (mouseX < 0 && mouseY > 0) {
-                angle += Math.PI;
+            var angle = (RGraph.getAngleByXY(0, 0, mouseX, mouseY));
+            if (angle > (PI + HALFPI)) {
+                angle -= TWOPI;
             }
 
             if (   (angle >= angleStart && angle <= angleEnd) ) {
@@ -779,7 +808,7 @@
                 /**
                 * Work out the radius
                 */
-                var radius = mouseY / Math.sin(angle)
+                var radius = (mouseY / Math.sin(angle)) || Math.abs(mouseX);
 
                 if (radius >= radiusStart && radius <= radiusEnd) {
                     angles[i][6] = i;
@@ -945,4 +974,83 @@
 
             return this;
         }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.Rose.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+
+        var coordX      = obj.angles[idx][4];
+        var coordY      = obj.angles[idx][5];
+        var angleStart  = obj.angles[idx][0];
+        var angleEnd    = obj.angles[idx][1];
+        var radius      = ((obj.angles[idx][3] - obj.angles[idx][2]) / 2) + obj.angles[idx][2];
+
+        var angleCenter = ((angleEnd - angleStart) / 2) + angleStart;
+        var canvasXY    = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft  = obj.Get('chart.gutter.left');
+        var gutterTop   = obj.Get('chart.gutter.top');
+        var width       = tooltip.offsetWidth;
+        var height      = tooltip.offsetHeight;
+
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+
+        // LEFT edge
+        if ((canvasXY[0] + coordX + (Math.cos(angleCenter) * radius) - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX + (Math.cos(angleCenter) * radius)- (width * 0.1)) + 'px';
+            tooltip.style.top = (canvasXY[1] + coordY + (Math.sin(angleCenter) * radius)- height - 5) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (Math.cos(angleCenter) * radius) + (width / 2)) > (document.body.offsetWidth - 10) ) {
+            tooltip.style.left = (canvasXY[0] + coordX + (Math.cos(angleCenter) * radius) - (width * 0.9)) + 'px';
+            tooltip.style.top = (canvasXY[1] + coordY + (Math.sin(angleCenter) * radius)- height - 5) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX + (Math.cos(angleCenter) * radius)- (width / 2)) + 'px';
+            tooltip.style.top = (canvasXY[1] + coordY + (Math.sin(angleCenter) * radius)- height - 5) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
+        }
+    }
+
+
+
+    /**
+    * This method gives you the relevant radius for a particular value
+    * 
+    * @param number value The relevant value to get the radius for
+    */
+    RGraph.Rose.prototype.getRadius = function (value)
+    {
+        // Range checking (the Rose minimum is always 0)
+        if (value < 0 || value > this.max) {
+            return null;
+        }
+        
+        var r = (value / this.max) * (this.radius - 10);
+        
+        return r;
     }

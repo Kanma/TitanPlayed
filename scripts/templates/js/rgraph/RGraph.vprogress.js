@@ -43,7 +43,7 @@
         RGraph.OldBrowserCompat(this.context);
 
         this.properties = {
-            'chart.colors':             ['#0c0', 'red', 'green', 'mauve','yellow', 'pink', 'cyan','black','white','gray'],
+            'chart.colors':             [RGraph.LinearGradient(this, 0,25,0,this.canvas.height - 25,'#0c0', 'white'), 'red', 'green', 'mauve','yellow', 'pink', 'cyan','black','white','gray'],
             'chart.strokestyle.inner':  '#999',
             'chart.strokestyle.outer':  '#999',
             'chart.tickmarks':          true,
@@ -116,7 +116,7 @@
             'chart.scale.thousand':     ',',
             'chart.scale.point':        '.',
             'chart.scale.visible':      true,
-            'chart.key':                [],
+            'chart.key':                null,
             'chart.key.background':     'white',
             'chart.key.position':       'graph',
             'chart.key.halign':             'right',
@@ -234,7 +234,7 @@
         RGraph.InstallEventListeners(this);
         
         // Draw a key if necessary
-        if (this.Get('chart.key').length) {
+        if (this.Get('chart.key') && this.Get('chart.key').length) {
             RGraph.DrawKey(this, this.Get('chart.key'), this.Get('chart.colors'));
         }
 
@@ -287,7 +287,7 @@
         this.context.strokeStyle = this.Get('chart.strokestyle.outer');
         this.context.fillStyle   = this.Get('chart.colors')[0];
         var margin = this.Get('chart.margin');
-        var barHeight = RGraph.GetHeight(this) - this.gutterTop - this.gutterBottom;
+        var barHeight = this.canvas.height - this.gutterTop - this.gutterBottom;
 
         // Draw the actual bar itself
         if (typeof(this.value) == 'number') {
@@ -729,4 +729,81 @@
                 }
             this.context.fill();
         }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.VProgress.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var coordX     = obj.coords[tooltip.__index__][0];
+        var coordY     = obj.coords[tooltip.__index__][1];
+        var coordW     = obj.coords[tooltip.__index__][2];
+        var coordH     = obj.coords[tooltip.__index__][3];
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+        var height     = tooltip.offsetHeight;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = canvasXY[1] + coordY - height - 7 + (coordH / 2) + 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+        
+        // LEFT edge
+        if ((canvasXY[0] + coordX + (coordW / 2) - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (coordW / 2) + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX + (coordW / 2) - (width * 0.5)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
+        }
+    }
+
+
+
+    /**
+    * This function returns the appropriate Y coordinate for the given Y value
+    * 
+    * @param  int value The Y value you want the coordinate for
+    * @returm int       The coordinate
+    */
+    RGraph.VProgress.prototype.getYCoord = function (value)
+    {
+        if (value > this.max || value < this.properties['chart.min']) {
+            return null;
+        }
+
+        var barHeight = this.canvas.height - this.properties['chart.gutter.top'] - this.properties['chart.gutter.bottom'];
+        var coord = ((value - this.properties['chart.min']) / (this.max - this.properties['chart.min'])) * barHeight;
+        coord = this.canvas.height - coord - this.properties['chart.gutter.bottom'];
+        
+        return coord;
     }

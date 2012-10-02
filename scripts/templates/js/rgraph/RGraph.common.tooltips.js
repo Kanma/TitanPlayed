@@ -34,8 +34,9 @@
     * @param int     y      The Y position the tooltip should appear at. Combined with the canvases offsetTop
     *                       gives the absolute Y position
     * @param int     idx    The index of the tooltip in the graph objects tooltip array
+    * @param object  e      The event object
     */
-    RGraph.Tooltip = function (obj, text, x, y, idx)
+    RGraph.Tooltip = function (obj, text, x, y, idx, e)
     {
         /**
         * chart.tooltip.override allows you to totally take control of rendering the tooltip yourself
@@ -43,7 +44,7 @@
         if (typeof(obj.Get('chart.tooltips.override')) == 'function') {
             return obj.Get('chart.tooltips.override')(obj, text, x, y, idx);
         }
-        
+
         /**
         * Save the X/Y coords
         */
@@ -74,80 +75,7 @@
             RGraph.HideContext();
         }
 
-        // Redraw the canvas?
-        //if (obj.Get('chart.tooltips.highlight')) {
-        //    RGraph.Redraw();
-        //}
-        var effect = obj.Get('chart.tooltips.effect').toLowerCase();
-
-        if (effect == 'snap' && RGraph.Registry.Get('chart.tooltip') && RGraph.Registry.Get('chart.tooltip').__canvas__.id == obj.canvas.id) {
-
-            if (   obj.type == 'line'
-                || obj.type == 'radar'
-                || obj.type == 'scatter'
-                || obj.type == 'rscatter'
-                ) {
-
-                var tooltipObj = RGraph.Registry.Get('chart.tooltip');
-                
-        
-                tooltipObj.style.width  = null;
-                tooltipObj.style.height = null;
-        
-                tooltipObj.innerHTML = text;
-                tooltipObj.__text__  = text;
-        
-                /**
-                * Now that the new content has been set, re-set the width & height
-                */
-                RGraph.Registry.Get('chart.tooltip').style.width  = RGraph.getTooltipWidth(text, obj) + 'px';
-                RGraph.Registry.Get('chart.tooltip').style.height = RGraph.Registry.Get('chart.tooltip').offsetHeight + 'px';
-
-                /**
-                * Now (25th September 2011) use jQuery if it's available
-                */
-                if (typeof(jQuery) == 'function' && typeof($) == 'function') {
-                    $('#' + tooltipObj.id).animate({
-                        opacity: 1,
-                        width: tooltipObj.offsetWidth + 'px',
-                        height: tooltipObj.offsetHeight + 'px',
-                        left: x + 'px',
-                        top: (y - tooltipObj.offsetHeight) + 'px'
-                    }, 300);
-                } else {
-                    var currentx = parseInt(RGraph.Registry.Get('chart.tooltip').style.left);
-                    var currenty = parseInt(RGraph.Registry.Get('chart.tooltip').style.top);
-                
-                    var diffx = x - currentx - ((x + RGraph.Registry.Get('chart.tooltip').offsetWidth) > document.body.offsetWidth ? RGraph.Registry.Get('chart.tooltip').offsetWidth : 0);
-                    var diffy = y - currenty - RGraph.Registry.Get('chart.tooltip').offsetHeight;
-                
-                    // Position the tooltip
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.left = "' + (currentx + (diffx * 0.2)) + 'px"', 25);
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.left = "' + (currentx + (diffx * 0.4)) + 'px"', 50);
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.left = "' + (currentx + (diffx * 0.6)) + 'px"', 75);
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.left = "' + (currentx + (diffx * 0.8)) + 'px"', 100);
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.left = "' + (currentx + (diffx * 1.0)) + 'px"', 125);
-                
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.top = "' + (currenty + (diffy * 0.2)) + 'px"', 25);
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.top = "' + (currenty + (diffy * 0.4)) + 'px"', 50);
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.top = "' + (currenty + (diffy * 0.6)) + 'px"', 75);
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.top = "' + (currenty + (diffy * 0.8)) + 'px"', 100);
-                    setTimeout('RGraph.Registry.Get("chart.tooltip").style.top = "' + (currenty + (diffy * 1.0)) + 'px"', 125);
-                }
-            
-            } else {
-        
-                alert('[TOOLTIPS] The "snap" effect is only supported on the Line, Rscatter, Scatter and Radar charts (tried to use it with type: ' + obj.type);
-            }
-
-            /**
-            * Fire the tooltip event
-            */
-            RGraph.FireCustomEvent(obj, 'ontooltip');
-
-            return;
-        }
-
+        var effect = obj.Get('chart.tooltips.effect') ? obj.Get('chart.tooltips.effect').toLowerCase() : 'fade';
 
 
         /**
@@ -159,7 +87,7 @@
         tooltipObj.style.position        = 'absolute';
         tooltipObj.style.left            = 0;
         tooltipObj.style.top             = 0;
-        tooltipObj.style.backgroundColor = 'rgba(255,255,239,0.9)';
+        tooltipObj.style.backgroundColor = 'rgb(255,255,239)';
         tooltipObj.style.color           = 'black';
         if (!document.all) tooltipObj.style.border = '';
         tooltipObj.style.visibility      = 'visible';
@@ -168,6 +96,12 @@
         tooltipObj.style.fontFamily      = RGraph.tooltips.font_face;
         tooltipObj.style.fontSize        = RGraph.tooltips.font_size;
         tooltipObj.style.zIndex          = 3;
+
+        // Only apply a border if there's content
+        if (RGraph.trim(text).length > 0) {
+            tooltipObj.style.border             = '1px #bbb solid';
+        }
+
         tooltipObj.style.borderRadius       = '5px';
         tooltipObj.style.MozBorderRadius    = '5px';
         tooltipObj.style.WebkitBorderRadius = '5px';
@@ -176,7 +110,7 @@
         tooltipObj.style.boxShadow          = 'rgba(96,96,96,0.5) 0 0 15px';
         tooltipObj.style.filter             = 'progid:DXImageTransform.Microsoft.Shadow(color=#666666,direction=135)';
         tooltipObj.style.opacity            = 0;
-        tooltipObj.style.overflow           = 'hidden';
+        //tooltipObj.style.overflow           = 'hidden';
         tooltipObj.innerHTML                = text;
         tooltipObj.__text__                 = text; // This is set because the innerHTML can change when it's set
         tooltipObj.__canvas__               = obj.canvas;
@@ -187,9 +121,10 @@
         
         if (typeof(idx) == 'number') {
             tooltipObj.__index__ = idx;
+            origIdx = idx;
         }
         
-        if (obj.type == 'line') {
+        if (obj.type == 'line' || obj.type == 'radar') {
             for (var ds=0; ds<obj.data.length; ++ds) {
                 if (idx >= obj.data[ds].length) {
                     idx -= obj.data[ds].length;
@@ -207,11 +142,11 @@
         var width  = tooltipObj.offsetWidth;
         var height = tooltipObj.offsetHeight;
 
-        if ((y - height - 2) > 0) {
-            y = y - height - 2;
-        } else {
-            y = y + 2;
-        }
+        //if ((y - height - 2) > 0) {
+        //    y = y - height - 2;
+        //} else {
+        //    y = y + 2;
+        //}
         /**
         * Set the width on the tooltip so it doesn't resize if the window is resized
         */
@@ -221,7 +156,7 @@
         /**
         * If the mouse is towards the right of the browser window and the tooltip would go outside of the window,
         * move it left
-        */
+        *
         if ( (x + width) > document.body.offsetWidth ) {
             x = x - width - 7;
             var placementLeft = true;
@@ -238,174 +173,47 @@
 
             tooltipObj.style.left = x + 'px';
             tooltipObj.style.top = y + 'px';
-        }
+        }*/
+
+        tooltipObj.style.top  = (y - height - 2) + 'px';
 
 
-        if (effect == 'expand') {
+        /**
+        * If the function exists call the object specific tooltip positioning function
+        */
+        if (typeof(obj.positionTooltip) == 'function') {
+            if (tooltipObj.innerHTML.length > 0) {
 
-            tooltipObj.style.left        = (x + (width / 2)) + 'px';
-            tooltipObj.style.top         = (y + (height / 2)) + 'px';
-            leftDelta                    = (width / 2) / 10;
-            topDelta                     = (height / 2) / 10;
+                obj.positionTooltip(obj, x, y, tooltipObj, origIdx ? origIdx : idx);
 
-            tooltipObj.style.width              = 0;
-            tooltipObj.style.height             = 0;
-            //tooltipObj.style.boxShadow          = '';
-            //tooltipObj.style.MozBoxShadow       = '';
-            //tooltipObj.style.WebkitBoxShadow    = '';
-            //tooltipObj.style.borderRadius       = 0;
-            //tooltipObj.style.MozBorderRadius    = 0;
-            //tooltipObj.style.WebkitBorderRadius = 0;
-            tooltipObj.style.opacity = 1;
+                if (obj.Get('chart.tooltips.coords.page')) {
 
-            // Progressively move the tooltip to where it should be (the x position)
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 25));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 50));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 75));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 100));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 125));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 150));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 175));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 200));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 225));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) - leftDelta) + 'px' }", 250));
-            
-            // Progressively move the tooltip to where it should be (the Y position)
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 25));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 50));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 75));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 100));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 125));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 150));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 175));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 200));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 225));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) - topDelta) + 'px' }", 250));
-
-            // Progressively grow the tooltip width
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.1) + "px'; }", 25));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.2) + "px'; }", 50));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.3) + "px'; }", 75));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.4) + "px'; }", 100));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.5) + "px'; }", 125));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.6) + "px'; }", 150));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.7) + "px'; }", 175));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.8) + "px'; }", 200));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 0.9) + "px'; }", 225));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + width + "px'; }", 250));
-
-            // Progressively grow the tooltip height
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.1) + "px'; }", 25));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.2) + "px'; }", 50));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.3) + "px'; }", 75));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.4) + "px'; }", 100));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.5) + "px'; }", 125));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.6) + "px'; }", 150));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.7) + "px'; }", 175));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.8) + "px'; }", 200));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 0.9) + "px'; }", 225));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + height + "px'; }", 250));
-            
-            // When the animation is finished, set the tooltip HTML
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').innerHTML = RGraph.Registry.Get('chart.tooltip').__text__; }", 250));
-        
-        } else if (effect == 'contract') {
-
-            tooltipObj.style.left = (x - width) + 'px';
-            tooltipObj.style.top  = (y - (height * 2)) + 'px';
-            tooltipObj.style.cursor = 'pointer';
-
-            leftDelta = width / 10;
-            topDelta  = height / 10;
-
-            tooltipObj.style.width  = (width * 5) + 'px';
-            tooltipObj.style.height = (height * 5) + 'px';
-
-            tooltipObj.style.opacity = 0.2;
-
-            // Progressively move the tooltip to where it should be (the x position)
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 25));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 50));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 75));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 100));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 125));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 150));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 175));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 200));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 225));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = (parseInt(RGraph.Registry.Get('chart.tooltip').style.left) + leftDelta) + 'px' }", 250));
-
-            // Progressively move the tooltip to where it should be (the Y position)
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 25));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 50));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 75));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 100));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 125));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 150));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 175));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 200));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 225));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = (parseInt(RGraph.Registry.Get('chart.tooltip').style.top) + (topDelta*2)) + 'px' }", 250));
-
-            // Progressively shrink the tooltip width
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 5.5) + "px'; }", 25));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 5.0) + "px'; }", 50));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 4.5) + "px'; }", 75));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 4.0) + "px'; }", 100));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 3.5) + "px'; }", 125));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 3.0) + "px'; }", 150));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 2.5) + "px'; }", 175));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 2.0) + "px'; }", 200));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + (width * 1.5) + "px'; }", 225));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.width = '" + width + "px'; }", 250));
-
-            // Progressively shrink the tooltip height
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 5.5) + "px'; }", 25));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 5.0) + "px'; }", 50));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 4.5) + "px'; }", 75));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 4.0) + "px'; }", 100));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 3.5) + "px'; }", 125));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 3.0) + "px'; }", 150));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 2.5) + "px'; }", 175));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 2.0) + "px'; }", 200));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + (height * 1.5) + "px'; }", 225));
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.height = '" + height + "px'; }", 250));
-
-            // When the animation is finished, set the tooltip HTML
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').innerHTML = RGraph.Registry.Get('chart.tooltip').__text__; }", 250));
-
-            /**
-            * This resets the pointer
-            */
-            RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.cursor = 'default'; }", 275));
-
-        } else if (effect == 'snap') {
-
-            /*******************************************************
-            * Move the tooltip
-            *******************************************************/
-            for (var i=1; i<=10; ++i) {
-                RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.left = '" + (x * 0.1 * i) + "px'; }", 15 * i));
-                RGraph.Registry.Get('chart.tooltip.timers').push(setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.top = '" + (y * 0.1 * i) + "px'; }", 15 * i));
+                    tooltipObj.style.left = e.pageX - (width / 2) - 4.25 + 'px';
+                    tooltipObj.style.top = e.pageY - height - 7 + 'px';
+                    
+                    document.getElementById('__rgraph_tooltip_pointer__').style.left = (parseInt(tooltipObj.offsetWidth) / 2)  - 8.5 + 'px';
+                }
             }
-
-            tooltipObj.style.left = 0 - tooltipObj.offsetWidth + 'px';
-            tooltipObj.style.top  = 0 - tooltipObj.offsetHeight + 'px';
-
-        } else if (effect != 'fade' && effect != 'expand' && effect != 'none' && effect != 'snap' && effect != 'contract') {
-            alert('[COMMON] Unknown tooltip effect: ' + effect);
+        } else {
+            tooltipObj.style.left = e.pageX - (width / 2) - 4.25 + 'px';
+            tooltipObj.style.top = e.pageY - height - 7 + 'px';
         }
 
-        if (effect != 'none') {
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.1; }", 25);
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.2; }", 50);
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.3; }", 75);
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.4; }", 100);
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.5; }", 125);
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.6; }", 150);
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.7; }", 175);
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.8; }", 200);
-            setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 0.9; }", 225);
+
+        if (effect == 'fade' || effect == 'expand' || effect == 'contract' || effect == 'snap') {
+            setTimeout(function () {tooltipObj.style.opacity = 0.1;}, 25);
+            setTimeout(function () {tooltipObj.style.opacity = 0.2;}, 50);
+            setTimeout(function () {tooltipObj.style.opacity = 0.3;}, 75);
+            setTimeout(function () {tooltipObj.style.opacity = 0.4;}, 100);
+            setTimeout(function () {tooltipObj.style.opacity = 0.5;}, 125);
+            setTimeout(function () {tooltipObj.style.opacity = 0.6;}, 150);
+            setTimeout(function () {tooltipObj.style.opacity = 0.7;}, 175);
+            setTimeout(function () {tooltipObj.style.opacity = 0.8;}, 200);
+            setTimeout(function () {tooltipObj.style.opacity = 0.9;}, 225);
+            
+            if (effect == 'expand' || effect == 'contract' || effect == 'snap') {
+                console.log('[RGRAPH] The snap, expand and contract tooltip effects are deprecated. Available effects now are fade and none');
+            }
         }
 
         setTimeout("if (RGraph.Registry.Get('chart.tooltip')) { RGraph.Registry.Get('chart.tooltip').style.opacity = 1;}", effect == 'none' ? 50 : 250);
@@ -424,7 +232,7 @@
 
 
         /**
-        * Keep a reference to the tooltip
+        * Keep a reference to the tooltip in the registry
         */
         RGraph.Registry.Set('chart.tooltip', tooltipObj);
 
@@ -483,7 +291,7 @@
     {
         var tooltip = RGraph.Registry.Get('chart.tooltip');
 
-        if (tooltip) {
+        if (tooltip && tooltip.parentNode) {
             tooltip.parentNode.removeChild(tooltip);
             tooltip.style.display = 'none';                
             tooltip.style.visibility = 'hidden';
@@ -727,7 +535,7 @@
                 context.strokeStyle = obj.Get('chart.highlight.stroke');
                 context.fillStyle   = obj.Get('chart.highlight.fill');
                 var radius   = obj.Get('chart.highlight.point.radius') || 2;
-                context.arc(shape['x'],shape['y'],radius, 0, 2 * Math.PI, 0);
+                context.arc(shape['x'],shape['y'],radius, 0, TWOPI, 0);
             context.stroke();
             context.fill();
         }

@@ -42,8 +42,8 @@
 
         // Various config
         this.properties = {
-            'chart.background.barcolor1':   'rgba(0,0,0,0)',
-            'chart.background.barcolor2':   'rgba(0,0,0,0)',
+            'chart.background.barcolor1':   'transparent',
+            'chart.background.barcolor2':   'transparent',
             'chart.background.grid':        true,
             'chart.background.grid.color':  '#ddd',
             'chart.background.grid.width':  1,
@@ -58,6 +58,7 @@
             'chart.background.grid.autofit.align': false,
             'chart.background.image':       null,
             'chart.background.hbars':       null, // ???
+            'chart.linewidth':              0,
             'chart.xaxispos':               'bottom',
             'chart.numyticks':              10,
             'chart.hmargin':                5,
@@ -86,6 +87,7 @@
             'chart.title.yaxis.bold':       true,
             'chart.title.yaxis.size':       null,
             'chart.title.yaxis.font':       null,
+            'chart.title.yaxis.color':      null,
             'chart.title.xaxis.pos':        null,
             'chart.title.yaxis.pos':        null,
             'chart.title.yaxis.align':      'left',
@@ -495,6 +497,8 @@
         var canvas       = this.canvas;
         var hmargin      = this.Get('chart.hmargin');
         var runningTotal = 0;
+        
+        this.context.lineWidth = this.properties['chart.linewidth'];
 
         
             for (var i=0; i<this.data.length; ++i) {
@@ -569,6 +573,8 @@
             /**
             * This draws the connecting lines
             */
+            this.context.lineWidth = 1;
+
             for (var i=1; i<this.coords.length; ++i) {
                 context.strokeStyle = 'gray';
                 context.beginPath();
@@ -709,5 +715,95 @@
             ) {
 
             return this;
+        }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.Waterfall.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var coordX     = obj.coords[tooltip.__index__][0];
+        var coordY     = obj.coords[tooltip.__index__][1];
+        var coordW     = obj.coords[tooltip.__index__][2];
+        var coordH     = obj.coords[tooltip.__index__][3];
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+        var height     = tooltip.offsetHeight;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = canvasXY[1] + coordY - height - 7 + (coordH / 2) + 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.position = 'absolute';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+        
+        // LEFT edge
+        if ((canvasXY[0] + coordX - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX + (coordW / 2) - (width * 0.5)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
+        }
+    }
+
+
+
+    /**
+    * This method returns the appropriate Y coord for the given value
+    * 
+    * @param number value The value
+    */
+    RGraph.Waterfall.prototype.getYCoord = function (value)
+    {
+        if (value > this.max) {
+            return null;
+        }
+
+        if (this.properties['chart.xaxispos'] == 'center') {
+
+            if (value < (-1 * this.max)) {
+                return null;
+            }
+        
+            var coord = (value / this.max) * (this.grapharea / 2);    
+            return this.gutterTop + (this.grapharea / 2) - coord;
+        
+        } else {
+
+            if (value < 0) {
+                return null;
+            }
+
+            var coord = (value / this.max) * this.grapharea;
+                coord = coord + this.gutterTop;
+            return this.canvas.height - coord;
         }
     }

@@ -64,7 +64,14 @@
             'chart.gutter.bottom':          25,
             'chart.labels':                 [],
             'chart.labels.align':           'bottom',
-            'chart.margin':                 2,
+            'chart.labels.inbar':           null,
+            'chart.labels.inbar.color':     'black',
+            'chart.labels.inbar.bgcolor':   null,
+            'chart.labels.inbar.align':     'left',
+            'chart.labels.inbar.size':      10,
+            'chart.labels.inbar.font':      'Arial',
+            'chart.labels.inbar.above':     false,
+            'chart.vmargin':                 2,
             'chart.title':                  '',
             'chart.title.background':       null,
             'chart.title.hpos':             null,
@@ -74,6 +81,7 @@
             'chart.title.yaxis':            '',
             'chart.title.yaxis.bold':        true,
             'chart.title.yaxis.pos':        null,
+            'chart.title.yaxis.color':      null,
             'chart.title.yaxis.position':   'right',
             'chart.events':                 [],
             'chart.borders':                true,
@@ -127,6 +135,10 @@
     */
     RGraph.Gantt.prototype.Set = function (name, value)
     {
+        if (name == 'chart.margin') {
+            name = 'chart.vmargin'
+        }
+
         this.properties[name.toLowerCase()] = value;
     }
 
@@ -138,6 +150,10 @@
     */
     RGraph.Gantt.prototype.Get = function (name)
     {
+        if (name == 'chart.margin') {
+            name = 'chart.vmargin'
+        }
+
         return this.properties[name.toLowerCase()];
     }
 
@@ -202,8 +218,9 @@
         * Draw the events
         */
         this.DrawEvents();
-        
-        
+
+
+
         /**
         * Setup the context menu if required
         */
@@ -339,10 +356,10 @@
         */
         for (i=0; i<events.length; ++i) {            
             if (typeof(events[i][0]) == 'number') {
-                this.DrawSingleEvent(events[i]);
+                this.DrawSingleEvent(events[i], i);
             } else {
                 for (var j=0; j<events[i].length; ++j) {
-                    this.DrawSingleEvent(events[i][j]);
+                    this.DrawSingleEvent(events[i][j], i);
                 }
             }
 
@@ -399,18 +416,17 @@
     /**
     * Draws a single event
     */
-    RGraph.Gantt.prototype.DrawSingleEvent = function ()
+    RGraph.Gantt.prototype.DrawSingleEvent = function (ev, index)
     {
         var min     = this.Get('chart.xmin');
         var context = this.context;
-        var ev      = RGraph.array_clone(arguments[0]);
 
         context.beginPath();
         context.strokeStyle = 'black';
         context.fillStyle = ev[4] ? ev[4] : this.Get('chart.defaultcolor');
 
-        var barStartX  = AA(this, this.gutterLeft + (((ev[0] - min) / (this.Get('chart.xmax') - min)) * this.graphArea));
-        var barStartY  = AA(this, this.gutterTop + (i * this.barHeight));
+        var barStartX  = this.gutterLeft + (((ev[0] - min) / (this.Get('chart.xmax') - min)) * this.graphArea);
+        var barStartY  = this.gutterTop + (index * this.barHeight);
         var barWidth   = (ev[1] / (this.Get('chart.xmax') - min) ) * this.graphArea;
 
         /**
@@ -420,20 +436,22 @@
             barWidth = this.canvas.width - this.gutterRight - barStartX;
         }
         
-        // This helps anti-aliasing
-        //
-        // 9/1/2012 
-        //
-        //The width is now rounded to the nearest pixel. This helps with antialiasing (because the start value is
-        // rounded to the nearest .5 value.
-        barWidth       = Math.round(barWidth);
-        this.barHeight = Math.round(this.barHeight)
-        
         /**
         *  Draw the actual bar storing store the coordinates
         */
-        this.coords.push([barStartX, barStartY + this.Get('chart.margin'), barWidth, this.barHeight - (2 * this.Get('chart.margin'))]);
-        context.fillRect(barStartX, barStartY + this.Get('chart.margin'), barWidth, this.barHeight - (2 * this.Get('chart.margin')) );
+        this.coords.push([barStartX, barStartY + this.Get('chart.vmargin'), barWidth, this.barHeight - (2 * this.Get('chart.vmargin'))]);
+
+        // draw the border around the bar
+        if (this.Get('chart.borders') || ev[6]) {
+            context.strokeStyle = typeof(ev[6]) == 'string' ? ev[6] : 'black';
+            context.lineWidth = (typeof(ev[7]) == 'number' ? ev[7] : 1);
+            context.beginPath();
+            context.strokeRect(barStartX, barStartY + this.Get('chart.vmargin'), barWidth, this.barHeight - (2 * this.Get('chart.vmargin')) );
+        }
+        
+        this.context.beginPath();
+            context.fillRect(barStartX, barStartY + this.Get('chart.vmargin'), barWidth, this.barHeight - (2 * this.Get('chart.vmargin')) );
+        this.context.fill();
 
         // Work out the completeage indicator
         var complete = (ev[2] / 100) * barWidth;
@@ -443,21 +461,58 @@
             context.beginPath();
             context.fillStyle = ev[5] ? ev[5] : '#0c0';
             context.fillRect(barStartX,
-                                  barStartY + this.Get('chart.margin'),
+                                  barStartY + this.Get('chart.vmargin'),
                                   (ev[2] / 100) * barWidth,
-                                  this.barHeight - (2 * this.Get('chart.margin')) );
+                                  this.barHeight - (2 * this.Get('chart.vmargin')) );
             
             context.beginPath();
-            context.fillStyle = this.Get('chart.text.color');
-            RGraph.Text(context, this.Get('chart.text.font'), this.Get('chart.text.size'), barStartX + barWidth + 5, barStartY + this.halfBarHeight, String(ev[2]) + '%', 'center');
+                context.fillStyle = this.Get('chart.text.color');
+                RGraph.Text(context, this.Get('chart.text.font'), this.Get('chart.text.size'), barStartX + barWidth + 5, barStartY + this.halfBarHeight, String(ev[2]) + '%', 'center');
         }
+        
+        /**
+        * Draw the inbar label if it's defined
+        */
+        if (this.Get('chart.labels.inbar') && this.Get('chart.labels.inbar')[index]) {
+            
+            var label = String(this.Get('chart.labels.inbar')[index]);
+            var halign = this.Get('chart.labels.inbar.align') == 'left' ? 'left' : 'center';
+                halign = this.Get('chart.labels.inbar.align') == 'right' ? 'right' : halign;
+            
+            // Work out the position of the text
+            if (halign == 'right') {
+                var x = (barStartX + barWidth) - 5;
+            } else if (halign == 'center') {
+                var x = barStartX + (barWidth / 2);
+            } else {
+                var x = barStartX + 5;
+            }
 
-        // draw the border around the bar
-        if (this.Get('chart.borders') || ev[6]) {
-            context.strokeStyle = typeof(ev[6]) == 'string' ? ev[6] : 'black';
-            context.lineWidth = (typeof(ev[7]) == 'number' ? ev[7] : 1);
-            context.beginPath();
-            context.strokeRect(barStartX, barStartY + this.Get('chart.margin'), barWidth, this.barHeight - (2 * this.Get('chart.margin')) );
+
+            // Draw the labels "above" the bar
+            if (this.Get('chart.labels.inbar.above')) {
+                x = barStartX + barWidth + 5;
+                halign = 'left';
+            }
+
+
+            // Set the color
+            this.context.fillStyle = this.Get('chart.labels.inbar.color');
+
+            this.context.beginPath();
+                RGraph.Text(this.context,
+                            this.Get('chart.labels.inbar.font'),
+                            this.Get('chart.labels.inbar.size'),
+                            x,
+                            barStartY + this.halfBarHeight,
+                            label,
+                            'center',
+                            halign,
+                            typeof(this.Get('chart.labels.inbar.bgcolor')) == 'string' ? true : false,
+                            null,
+                            typeof(this.Get('chart.labels.inbar.bgcolor')) == 'string' ? this.Get('chart.labels.inbar.bgcolor') : null
+                           );
+            this.context.fill();
         }
     }
 
@@ -563,4 +618,81 @@
                 RGraph.RedrawCanvas(obj.canvas);
             }
         }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.Gantt.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var coordX     = obj.coords[tooltip.__index__][0];
+        var coordY     = obj.coords[tooltip.__index__][1];
+        var coordW     = obj.coords[tooltip.__index__][2];
+        var coordH     = obj.coords[tooltip.__index__][3];
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+        var height     = tooltip.offsetHeight;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = canvasXY[1] + coordY - height - 7 + (coordH / 2) + 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+        
+        // LEFT edge
+        if ((canvasXY[0] + coordX - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX + (coordW / 2) - (width * 0.5)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
+        }
+    }
+
+
+
+    /**
+    * Returns the X coordinate for the given value
+    * 
+    * @param number value The desired value (eg minute/hour/day etc)
+    */
+    RGraph.Gantt.prototype.getXCoord = function (value)
+    {
+        var min = this.Get('chart.xmin');
+        var max = this.Get('chart.xmax');
+        
+        if (value > max || value < min) {
+            return null;
+        }
+        
+        var x = (((value - min) / (max - min)) * this.graphArea) + this.gutterLeft;
+        
+        return x;
     }

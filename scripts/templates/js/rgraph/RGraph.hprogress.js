@@ -44,7 +44,7 @@
 
         this.properties = {
             'chart.min':                0,
-            'chart.colors':             ['#0c0'],
+            'chart.colors':             [RGraph.LinearGradient(this,25,0,this.canvas.width - 25,0,'white', '#0c0'), 'red', 'yellow', 'pink', 'gray'],
             'chart.strokestyle.inner':  '#999',
             'chart.strokestyle.outer':  '#999',
             'chart.tickmarks':          true,
@@ -103,7 +103,7 @@
             'chart.scale.decimals':     0,
             'chart.scale.point':        '.',
             'chart.scale.thousand':     ',',
-            'chart.key':                [],
+            'chart.key':                null,
             'chart.key.background':     'white',
             'chart.key.position':       'gutter',
             'chart.key.halign':             'right',
@@ -194,7 +194,7 @@
         * Set the current value
         */
         this.currentValue = this.value;
-        
+
         /**
         * This is new in May 2011 and facilitates individual gutter settings,
         * eg chart.gutter.left
@@ -225,7 +225,7 @@
 
 
         // Draw the key if necessary
-        if (this.Get('chart.key').length) {
+        if (this.Get('chart.key') && this.Get('chart.key').length) {
             RGraph.DrawKey(this, this.Get('chart.key'), this.Get('chart.colors'));
         }
 
@@ -278,7 +278,7 @@
         // Turn off any shadow
         RGraph.NoShadow(this);
 
-        this.context.fillStyle   = this.Get('chart.color');
+        this.context.fillStyle   = this.Get('chart.colors')[0];
         this.context.strokeStyle = this.Get('chart.strokestyle.outer');
         
         var margin = this.Get('chart.margin');
@@ -288,7 +288,7 @@
 
         if (this.Get('chart.tickmarks.inner')) {
 
-            var spacing = (RGraph.GetWidth(this) - this.gutterLeft - this.gutterRight) / this.Get('chart.numticks.inner');
+            var spacing = (this.canvas.width - this.gutterLeft - this.gutterRight) / this.Get('chart.numticks.inner');
 
             this.context.lineWidth   = 1;
             this.context.strokeStyle = this.Get('chart.strokestyle.outer');
@@ -644,4 +644,83 @@
                 }
             this.context.fill();
         }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.HProgress.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var coordX     = obj.coords[tooltip.__index__][0];
+        var coordY     = obj.coords[tooltip.__index__][1];
+        var coordW     = obj.coords[tooltip.__index__][2];
+        var coordH     = obj.coords[tooltip.__index__][3];
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+        var height     = tooltip.offsetHeight;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = canvasXY[1] + coordY - height - 7 + (coordH / 2) + 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+        
+        // LEFT edge
+        if ((canvasXY[0] + coordX  + (coordW / 2) - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + (coordW / 2) + coordX + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX + (coordW / 2) - (width * 0.5)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
+        }
+    }
+
+
+
+    /**
+    * This function returns the appropriate X coordinate for the given value
+    * 
+    * @param  int value The value you want the coordinate for
+    * @returm int       The coordinate
+    */
+    RGraph.HProgress.prototype.getXCoord = function (value)
+    {
+        var min = this.properties['chart.min'];
+
+        if (value < min || value > this.max) {
+            return null;
+        }
+
+        var barWidth = this.canvas.width - this.properties['chart.gutter.left'] - this.properties['chart.gutter.right'];
+        var coord = ((value - min) / (this.max - min)) * barWidth;
+        coord = this.properties['chart.gutter.left'] + coord;
+        
+        return coord;
     }

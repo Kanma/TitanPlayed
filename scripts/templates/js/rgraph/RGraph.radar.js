@@ -48,22 +48,24 @@
 
         
         this.properties = {
-            'chart.strokestyle':           'black',
+            'chart.strokestyle':           '#aaa',
             'chart.gutter.left':           25,
             'chart.gutter.right':          25,
             'chart.gutter.top':            25,
             'chart.gutter.bottom':         25,
             'chart.linewidth':             1,
-            'chart.colors':                ['red', 'green', 'blue', 'pink', 'aqua','brown','orange','grey'],
+            'chart.colors':                ['rgba(255,255,0,0.25)','rgba(0,255,255,0.25)','rgba(255,0,0,0.5)', 'red', 'green', 'blue', 'pink', 'aqua','brown','orange','grey'],
             'chart.colors.alpha':          null,
             'chart.circle':                0,
             'chart.circle.fill':           'red',
             'chart.circle.stroke':         'black',
             'chart.labels':                [],
-            'chart.labels.offsetx':        10,
-            'chart.labels.offsety':        10,
+            'chart.labels.offset':         10,
             'chart.background.circles':    true,
-            'chart.text.diameter':         10,
+            'chart.background.circles.color': '#ddd',
+            'chart.background.circles.poly':  false,
+            'chart.background.circles.spacing': 15, 
+            'chart.text.size':             10,
             'chart.text.font':             'Arial',
             'chart.text.color':            'black',
             'chart.title':                 '',
@@ -74,7 +76,6 @@
             'chart.title.bold':             true,
             'chart.title.font':             null,
             'chart.linewidth':             1,
-            
             'chart.key':                   null,
             'chart.key.background':        'white',
             'chart.key.shadow':            false,
@@ -102,7 +103,6 @@
             'chart.zoom.frames':            25,
             'chart.zoom.delay':             16.666,
             'chart.zoom.shadow':           true,
-
             'chart.zoom.background':        true,
             'chart.zoom.action':            'zoom',
             'chart.tooltips.effect':        'fade',
@@ -130,7 +130,14 @@
             'chart.tooltips.event':       'onmousemove',
             'chart.centerx':              null,
             'chart.centery':              null,
-            'chart.radius':               null
+            'chart.radius':               null,
+            'chart.numxticks':            10,
+            'chart.numyticks':            10,
+            'chart.axes.color':           'black',
+            'chart.highlights':           false,
+            'chart.highlights.stroke':    '#ddd',
+            'chart.highlights.fill':      null,
+            'chart.highlights.radius':    3
         }
         
         // Must have at least 3 points
@@ -158,6 +165,10 @@
     */
     RGraph.Radar.prototype.Set = function (name, value)
     {
+        if (name == 'chart.text.diameter') {
+            name = 'chart.text.size';
+        }
+
         this.properties[name] = value;
 
         /**
@@ -176,6 +187,10 @@
     */
     RGraph.Radar.prototype.Get = function (name)
     {
+        if (name == 'chart.text.diameter') {
+            name = 'chart.text.size';
+        }
+
         return this.properties[name];
     }
 
@@ -191,7 +206,9 @@
         RGraph.FireCustomEvent(this, 'onbeforedraw');
 
 
-        
+        // Reset the coords array to stop it growing
+        this.coords = [];
+
         /**
         * Reset the data to the original_data
         */
@@ -274,10 +291,9 @@
         this.DrawAxes();
         this.DrawCircle();
         this.DrawAxisLabels();
-
-        
         this.DrawChart();
         this.DrawLabels();
+        this.DrawHighlights();
         
         // Draw the title
         if (this.Get('chart.title')) {
@@ -323,37 +339,72 @@
     */
     RGraph.Radar.prototype.DrawBackground = function ()
     {
-        var color = '#ddd';
+        var color   = this.Get('chart.background.circles.color');
+        var poly    = this.Get('chart.background.circles.poly');
+        var spacing = this.Get('chart.background.circles.spacing');
 
         /**
         * Draws the background circles
         */
-        if (this.Get('chart.background.circles')) {
+        if (this.Get('chart.background.circles') && poly == false) {
 
            this.context.strokeStyle = color;
            this.context.beginPath();
+               for (var r=5; r<this.radius; r+=spacing) {
 
-           for (var r=5; r<this.radius; r+=15) {
-
-                this.context.moveTo(this.centerx, this.centery);
-                this.context.arc(this.centerx, this.centery,r, 0, 6.28, 0);
-            }
-            
+                    this.context.moveTo(this.centerx, this.centery);
+                    this.context.arc(this.centerx, this.centery,r, 0, TWOPI, false);
+                }
             this.context.stroke();
-        
-        
+
+    
             /**
-            * Draw diagonals
+            * Draw the diagonals/spokes
             */
             this.context.strokeStyle = color;
+
             for (var i=0; i<360; i+=15) {
                 this.context.beginPath();
-                this.context.arc(this.centerx, this.centery, this.radius, (i / 360) * (2 * Math.PI), ((i+0.01) / 360) * (2 * Math.PI), 0); // The 0.01 avoids a bug in Chrome 6
+                this.context.arc(this.centerx, this.centery, this.radius, (i / 360) * TWOPI, ((i+0.01) / 360) * TWOPI, 0); // The 0.01 avoids a bug in Chrome 6
                 this.context.lineTo(this.centerx, this.centery);
                 this.context.stroke();
             }
+
+        /**
+        * The background"circles" are actually drawn as a poly based on how many points there are
+        * (ie hexagons if there are 6 points, squares if the are four etc)
+        */
+        } else if (this.Get('chart.background.circles') && poly == true) {
+
+            /**
+            * Draw the diagonals/spokes
+            */
+            this.context.strokeStyle = color;
+            var increment = 360 / this.data[0].length
+
+            for (var i=0; i<360; i+=increment) {
+                this.context.beginPath();
+                    this.context.arc(this.centerx, this.centery, this.radius, ((i / 360) * TWOPI) - HALFPI, (((i + 0.0001) / 360) * TWOPI) - HALFPI, 0); // The 0.01 avoids a bug in Chrome 6
+                    this.context.lineTo(this.centerx, this.centery);
+                this.context.stroke();
+            }
+
+
+            /**
+            * Draw the lines that go around the Radar chart
+            */
+            this.context.strokeStyle = color;
+                for (var r=0; r<this.radius; r+=spacing) {
+                    this.context.beginPath();
+                        for (var a=0; a<=360; a+=(360 / this.data[0].length)) {
+                            this.context.arc(this.centerx, this.centery,r, RGraph.degrees2Radians(a) - HALFPI, RGraph.degrees2Radians(a) + 0.00001 - HALFPI, 0);
+                        }
+                    this.context.closePath();
+                    this.context.stroke();
+                }
         }
     }
+
 
 
     /**
@@ -361,52 +412,49 @@
     */
     RGraph.Radar.prototype.DrawAxes = function ()
     {
-        this.context.strokeStyle = 'black';
+        this.context.strokeStyle = this.Get('chart.axes.color');
 
         var halfsize = this.radius;
 
         this.context.beginPath();
+            /**
+            * The Y axis
+            */
+            this.context.moveTo(AA(this, this.centerx), this.centery + halfsize);
+            this.context.lineTo(AA(this, this.centerx), this.centery - halfsize);
+            
+    
+            // Draw the bits at either end of the Y axis
+            this.context.moveTo(this.centerx - 5, AA(this, this.centery + halfsize));
+            this.context.lineTo(this.centerx + 5, AA(this, this.centery + halfsize));
+            this.context.moveTo(this.centerx - 5, AA(this, this.centery - halfsize));
+            this.context.lineTo(this.centerx + 5, AA(this, this.centery - halfsize));
 
-        /**
-        * The Y axis
-        */
-        this.context.moveTo(AA(this, this.centerx), this.centery + halfsize);
-        this.context.lineTo(AA(this, this.centerx), this.centery - halfsize);
-        
+            // Draw Y axis tick marks
+            for (var y=(this.centery - halfsize); y<(this.centery + halfsize); y+=(halfsize/this.properties['chart.numyticks'])) {
+                this.context.moveTo(this.centerx - 3, AA(this, y));
+                this.context.lineTo(this.centerx + 3, AA(this, y));
+            }
+    
+            /**
+            * The X axis
+            */
+            this.context.moveTo(this.centerx - halfsize, AA(this, this.centery));
+            this.context.lineTo(this.centerx + halfsize, AA(this, this.centery));
+    
+            // Draw the bits at the end of the X axis
+            this.context.moveTo(AA(this, this.centerx - halfsize), this.centery - 5);
+            this.context.lineTo(AA(this, this.centerx - halfsize), this.centery + 5);
+            this.context.moveTo(AA(this, this.centerx + halfsize), this.centery - 5);
+            this.context.lineTo(AA(this, this.centerx + halfsize), this.centery + 5);
+    
+            // Draw X axis tick marks
+            for (var x=(this.centerx - halfsize); x<(this.centerx + halfsize); x+=(halfsize/this.properties['chart.numxticks'])) {
+                this.context.moveTo(AA(this, x), this.centery - 3);
+                this.context.lineTo(AA(this, x), this.centery + 3);
+            }
 
-        // Draw the bits at either end of the Y axis
-        this.context.moveTo(this.centerx - 5, AA(this, this.centery + halfsize));
-        this.context.lineTo(this.centerx + 5, AA(this, this.centery + halfsize));
-        this.context.moveTo(this.centerx - 5, AA(this, this.centery - halfsize));
-        this.context.lineTo(this.centerx + 5, AA(this, this.centery - halfsize));
-        
-        // Draw Y axis tick marks
-        for (var y=(this.centery - halfsize); y<(this.centery + halfsize); y+=15) {
-            this.context.moveTo(this.centerx - 3, AA(this, y));
-            this.context.lineTo(this.centerx + 3, AA(this, y));
-        }
-
-        /**
-        * The X axis
-        */
-        this.context.moveTo(this.centerx - halfsize, AA(this, this.centery));
-        this.context.lineTo(this.centerx + halfsize, AA(this, this.centery));
-
-        // Draw the bits at the end of the X axis
-        this.context.moveTo(AA(this, this.centerx - halfsize), this.centery - 5);
-        this.context.lineTo(AA(this, this.centerx - halfsize), this.centery + 5);
-        this.context.moveTo(AA(this, this.centerx + halfsize), this.centery - 5);
-        this.context.lineTo(AA(this, this.centerx + halfsize), this.centery + 5);
-
-        // Draw X axis tick marks
-        for (var x=(this.centerx - halfsize); x<(this.centerx + halfsize); x+=15) {
-            this.context.moveTo(AA(this, x), this.centery - 3);
-            this.context.lineTo(AA(this, x), this.centery + 3);
-        }
-
-        /**
-        * Finally draw it to the canvas
-        */
+        // Stroke it
         this.context.stroke();
     }
 
@@ -426,46 +474,63 @@
         var numDatasets = this.data.length;
 
         for (var dataset=0; dataset<this.data.length; ++dataset) {
-// =============================================================================================== //
+
             this.context.beginPath();
-            
-                this.coords[dataset] = [];
+
+                var coords_dataset = [];
     
                 for (var i=0; i<this.data[dataset].length; ++i) {
-                    this.coords[dataset][i] = this.GetCoordinates(dataset, i);
+                    
+                    var coords = this.GetCoordinates(dataset, i);
+
+                    if (coords_dataset == null) {
+                        coords_dataset = [];
+                    }
+
+                    coords_dataset.push(coords);
+                    this.coords.push(coords);
                 }
-    
+
                 /**
                 * Now go through the coords and draw the chart itself
+                *
+                * 18/5/2012 - chart.strokestyle can now be an array of colors as well as a single color
                 */
-                this.context.strokeStyle = this.Get('chart.strokestyle');
+
+                this.context.strokeStyle = (typeof(this.Get('chart.strokestyle')) == 'object' && this.Get('chart.strokestyle')[dataset]) ? this.Get('chart.strokestyle')[dataset] : this.Get('chart.strokestyle');
                 this.context.fillStyle   = this.Get('chart.colors')[dataset];
                 this.context.lineWidth   = this.Get('chart.linewidth');
 
-                for (i=0; i<this.coords[dataset].length; ++i) {
+                for (i=0; i<coords_dataset.length; ++i) {
                     if (i == 0) {
-                        this.context.moveTo(this.coords[dataset][i][0], this.coords[dataset][i][1]);
+                        this.context.moveTo(coords_dataset[i][0], coords_dataset[i][1]);
                     } else {
-                        this.context.lineTo(this.coords[dataset][i][0], this.coords[dataset][i][1]);
+                        this.context.lineTo(coords_dataset[i][0], coords_dataset[i][1]);
                     }
                 }
                 
+
                 // If on the second or greater dataset, backtrack
                 if (this.Get('chart.accumulative') && dataset > 0) {
 
-                    this.context.lineTo(this.coords[dataset][0][0], this.coords[dataset][0][1]);
-                    this.context.lineTo(this.coords[dataset][0][0], this.coords[dataset - 1][0][1]);
+                    // This goes back to the start coords of this particular dataset
+                    this.context.lineTo(coords_dataset[0][0], coords_dataset[0][1]);
+                    
+                    //Now move down to the end point of the previous dataset
+                    this.context.moveTo(last_coords[0][0], last_coords[0][1]);
 
-                    for (var i=this.coords[dataset].length - 1; i>=0; --i) {
-                        this.context.lineTo(this.coords[dataset - 1][i][0], this.coords[dataset - 1][i][1]);
+                    for (var i=coords_dataset.length - 1; i>=0; --i) {
+                        this.context.lineTo(last_coords[i][0], last_coords[i][1]);
                     }
                 }
             
+            // This is used by the next iteration of the loop
+            var last_coords = coords_dataset;
+
             this.context.closePath();
     
             this.context.stroke();
             this.context.fill();
-// =============================================================================================== //
         }
         
         // Reset the globalAlpha
@@ -491,8 +556,8 @@
         /**
         * Get the angle
         */
-        var angle = ((2 * Math.PI) / len) * index; // In radians
-        angle -= (Math.PI / 2)
+        var angle = (TWOPI / len) * index; // In radians
+        angle -= HALFPI;
 
 
         /**
@@ -521,22 +586,21 @@
         if (labels && labels.length > 0) {
 
             this.context.lineWidth = 1;
+            this.context.strokeStyle = 'gray';
             this.context.fillStyle = this.Get('chart.text.color');
             
-            var offsetx = this.Get('chart.labels.offsetx');
-            var offsety = this.Get('chart.labels.offsety');
+            var offset  = this.Get('chart.labels.offset');
             var font    = this.Get('chart.text.font');
-            var size    = this.Get('chart.text.diameter');
+            var size    = this.Get('chart.text.size');
             var radius  = this.radius;
-                
 
             for (var i=0; i<labels.length; ++i) {
                 
-                var angle = ((2 * Math.PI) / this.Get('chart.labels').length) * i;
-                    angle -= (Math.PI / 2);
+                var angle = (TWOPI / this.Get('chart.labels').length) * i;
+                    angle -= HALFPI;
 
-                var x = this.centerx + (Math.cos(angle) * (radius + offsetx));
-                var y = this.centery + (Math.sin(angle) * (radius + offsety));
+                var x = this.centerx + (Math.cos(angle) * (radius + offset));
+                var y = this.centery + (Math.sin(angle) * (radius + offset));
 
                 if (labels[i] && labels[i].length) {
                     RGraph.Text(this.context, font, size, x, y, labels[i], 'center', 'center', true, null, 'white');
@@ -564,7 +628,7 @@
             this.context.strokeStyle = circle.stroke;
 
             this.context.beginPath();
-            this.context.arc(this.centerx, this.centery, r, 0, 6.28, 0);
+            this.context.arc(this.centerx, this.centery, r, 0, TWOPI, 0);
             this.context.fill();
             this.context.stroke();
         }
@@ -592,7 +656,7 @@
 
         var r          = this.radius;
         var font_face  = this.Get('chart.text.font');
-        var font_size  = this.Get('chart.text.diameter');
+        var font_size  = this.Get('chart.text.size');
         var context    = this.context;
         var axes       = this.Get('chart.labels.axes').toLowerCase();
         var color      = 'rgba(255,255,255,0.8)';
@@ -600,6 +664,8 @@
         var units_pre  = this.Get('chart.units.pre');
         var units_post = this.Get('chart.units.post');
         var decimals   = this.Get('chart.scale.decimals');
+        
+        this.context,fillStyle = this.properties['chart.text.color'];
 
         // The "North" axis labels
         if (axes.indexOf('n') > -1) {
@@ -663,12 +729,13 @@
         var labels  = this.Get('chart.labels.specific');
         var context = this.context;
         var font    = this.Get('chart.text.font');
-        var size    = this.Get('chart.text.diameter');
+        var size    = this.Get('chart.text.size');
         var axes    = this.Get('chart.labels.axes').toLowerCase();
         var interval = (this.radius * 2) / (labels.length * 2);
+        
+        this.context.fillStyle = this.properties['chart.text.color'];
 
         for (var i=0; i<labels.length; ++i) {
-
             if (axes.indexOf('n') > -1) RGraph.Text(context,font,size,this.gutterLeft + this.radius,this.gutterTop + (i * interval),labels[i],'center','center', true, false, 'rgba(255,255,255,0.8)');
             if (axes.indexOf('s') > -1) RGraph.Text(context,font,size,this.gutterLeft + this.radius,this.gutterTop + this.radius + (i * interval) + interval,RGraph.array_reverse(labels)[i],'center','center', true, false, 'rgba(255,255,255,0.8)');
             if (axes.indexOf('w') > -1) RGraph.Text(context,font,size,this.gutterLeft + (i * interval),this.gutterTop + this.radius,labels[i],'center','center', true, false, 'rgba(255,255,255,0.8)');
@@ -688,40 +755,31 @@
         var canvas  = this.canvas;
         var context = this.context;
 
-        for(var dataset=0; dataset<this.coords.length; ++dataset) {
-            for (var i=0; i<this.coords[dataset].length; ++i) {
-            
-                var x           = this.coords[dataset][i][0];
-                var y           = this.coords[dataset][i][1];
-                var tooltips    = this.Get('chart.tooltips');
-                var idx         = Number(i);
-                var mouseCoords = RGraph.getMouseXY(e);
-                var mouseX      = mouseCoords[0];
-                var mouseY      = mouseCoords[1];
+        for (var i=0; i<this.coords.length; ++i) {
 
-                if (   mouseX < (x + 5)
-                    && mouseX > (x - 5)
-                    && mouseY > (y - 5)
-                    && mouseY < (y + 5)
-                   ) {
+            var x        = this.coords[i][0];
+            var y        = this.coords[i][1];
+            var tooltips = this.Get('chart.tooltips');
+            var index    = Number(i);
+            var mouseXY  = RGraph.getMouseXY(e);
+            var mouseX   = mouseXY[0];
+            var mouseY   = mouseXY[1];
 
-                    // This accounts for the datasets and increases the index accordingly
-                    for(var j=0; j<dataset; j++) {
-                        if (typeof(this.data[j]) == 'object') {
-                            i += this.data[j].length;
-                        }
-                    }
-                    
-                var tooltip = RGraph.parseTooltipText(this.Get('chart.tooltips'), i);
+            if (   mouseX < (x + 5)
+                && mouseX > (x - 5)
+                && mouseY > (y - 5)
+                && mouseY < (y + 5)
+               ) {
+                
+                var tooltip = RGraph.parseTooltipText(this.Get('chart.tooltips'), index);
 
                 return {0: this,    'object':  this,
                         1: x,       'x':       x,
                         2: y,       'y':       y,
-                        3: dataset, 'dataset': dataset,
-                        4: i,       'index':   i,
+                        3: null, 'dataset': null,
+                        4: index,       'index':   i,
                                     'tooltip': tooltip
                        }
-                }
             }
         }
     }
@@ -761,4 +819,125 @@
 
             return this;
         }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.Radar.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var dataset    = tooltip.__dataset__;
+        var index      = tooltip.__index__;
+        var coordX     = obj.coords[index][0];
+        var coordY     = obj.coords[index][1];
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = parseInt(tooltip.style.top) - 9 + 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+        
+        // LEFT edge
+        if ((canvasXY[0] + coordX - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.5)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
+        }
+    }
+
+
+
+    /**
+    * This draws highlights on the points
+    */
+    RGraph.Radar.prototype.DrawHighlights = function ()
+    {
+        if (this.Get('chart.highlights')) {
+            
+            var sequentialIdx = 0;
+            var dataset       = 0;
+            var index         = 0;
+            var radius        = this.Get('chart.highlights.radius');
+    
+            for (var dataset=0; dataset <this.data.length; ++dataset) {
+                for (var index=0; index<this.data[dataset].length; ++index) {
+                    
+                    this.context.beginPath();
+                        this.context.strokeStyle = this.Get('chart.highlights.stroke');
+                        this.context.fillStyle = this.Get('chart.highlights.fill') ? this.Get('chart.highlights.fill') : ((typeof(this.Get('chart.strokestyle')) == 'object' && this.Get('chart.strokestyle')[dataset]) ? this.Get('chart.strokestyle')[dataset] : this.Get('chart.strokestyle'));
+                        this.context.arc(this.coords[sequentialIdx][0], this.coords[sequentialIdx][1], radius, 0, TWOPI, false);
+                    this.context.stroke();
+                    this.context.fill();
+    
+                    ++sequentialIdx;
+                }
+            }
+        }
+    }
+
+
+
+    /**
+    * This function returns the radius (ie the distance from the center) for a particular
+    * value. Note that if you want the angle for a point you can use getAngle(index)
+    * 
+    * @param number value The value you want the radius for
+    */
+    RGraph.Radar.prototype.getRadius = function (value)
+    {
+        if (value < 0 || value > this.max) {
+            return null;
+        }
+
+        // Radar doesn't support minimum value
+        var radius = (value / this.max) * this.radius;
+        
+        return radius;
+    }
+
+
+
+    /**
+    * This function returns the angle (in radians) for a particular index.
+    * 
+    * @param number numitems The total number of items
+    * @param number index    The zero index number of the item to get the angle for
+    */
+    RGraph.Radar.prototype.getAngle = function (numitems, index)
+    {
+        var angle = (TWOPI / numitems) * index;
+            angle -= HALFPI;
+        
+        return angle;
     }

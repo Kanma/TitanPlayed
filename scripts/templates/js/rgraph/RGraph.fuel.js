@@ -1,4 +1,4 @@
-/**
+    /**
     * o------------------------------------------------------------------------------o
     * | This file is part of the RGraph package - you can learn more at:             |
     * |                                                                              |
@@ -51,13 +51,20 @@
             alert('[FUEL] No canvas support');
             return;
         }
+        
+        /**
+        * This is the gradient that is now the default color
+        */
+        var grad = this.context.createLinearGradient(0,0,this.canvas.width, 0);
+        grad.addColorStop(0, 'white');
+        grad.addColorStop(1, 'red');
 
         /**
         * The funnel charts properties
         */
         this.properties =
         {
-            'chart.colors':                   ['red'],
+            'chart.colors':                   [grad],
             'chart.needle.color':             'red',
             'chart.gutter.left':              5,
             'chart.gutter.right':             5,
@@ -91,10 +98,21 @@
             'chart.background.image.y':       null,
             'chart.labels.full':              'F',
             'chart.labels.empty':             'E',
+            'chart.labels.count':             5,
             'chart.centerx':                  null,
             'chart.centery':                  null,
-            'chart.radius':                   null
+            'chart.radius':                   null,
+            'chart.scale.visible':            false,
+            'chart.scale.decimals':           0,
+            'chart.units.pre':                '',
+            'chart.units.post':               ''
         }
+        
+        /**
+        * Bounds checking - if the value is outside the scale
+        */
+        if (this.value > this.max) this.value = this.max;
+        if (this.value < this.min) this.value = this.min;
 
 
 
@@ -151,10 +169,10 @@
         * This is new in May 2011 and facilitates indiviual gutter settings,
         * eg chart.gutter.left
         */
-        this.gutterLeft   = this.Get('chart.gutter.left');
-        this.gutterRight  = this.Get('chart.gutter.right');
-        this.gutterTop    = this.Get('chart.gutter.top');
-        this.gutterBottom = this.Get('chart.gutter.bottom');
+        this.gutterLeft   = this.properties['chart.gutter.left'];
+        this.gutterRight  = this.properties['chart.gutter.right'];
+        this.gutterTop    = this.properties['chart.gutter.top'];
+        this.gutterBottom = this.properties['chart.gutter.bottom'];
 
 
 
@@ -181,9 +199,9 @@
         /**
         * The start and end angles of the chart
         */
-        this.angles.start  = (Math.PI * 1.5) - 0.5;
-        this.angles.end    = (Math.PI * 1.5) + 0.5;
-        this.angles.needle = (((this.value - this.min) / (this.max - this.min)) * (this.angles.end - this.angles.start)) + this.angles.start;
+        this.angles.start  = (PI + HALFPI) - 0.5;
+        this.angles.end    = (PI + HALFPI) + 0.5;
+        this.angles.needle = this.getAngle(this.value);
 
 
 
@@ -237,8 +255,8 @@
     */
     RGraph.Fuel.prototype.DrawChart = function ()
     {
-        var context   = this.context;
-        var canvas    = this.canvas;
+        var context = this.context;
+        var canvas  = this.canvas;
         
         /**
         * Draw the "Scale"
@@ -266,18 +284,20 @@
     */
     RGraph.Fuel.prototype.DrawLabels = function ()
     {
-        var radius = (this.radius - 20);
-        this.context.fillStyle = this.Get('chart.text.color');
-        
-        // Draw the left label
-        var y = this.centery - Math.sin(this.angles.start - 3.14) * (this.radius - 25);
-        var x = this.centerx - Math.cos(this.angles.start - 3.14) * (this.radius - 25);
-        RGraph.Text(this.context, this.Get('chart.text.font'), this.Get('chart.text.size'), x, y, this.Get('chart.labels.empty'), 'center', 'center');
-        
-        // Draw the right label
-        var y = this.centery - Math.sin(this.angles.start - 3.14) * (this.radius - 25);
-        var x = this.centerx + Math.cos(this.angles.start - 3.14) * (this.radius - 25);
-        RGraph.Text(this.context, this.Get('chart.text.font'), this.Get('chart.text.size'), x, y, this.Get('chart.labels.full'), 'center', 'center');
+        if (!this.properties['chart.scale.visible']) {
+            var radius = (this.radius - 20);
+            this.context.fillStyle = this.Get('chart.text.color');
+            
+            // Draw the left label
+            var y = this.centery - Math.sin(this.angles.start - PI) * (this.radius - 25);
+            var x = this.centerx - Math.cos(this.angles.start - PI) * (this.radius - 25);
+            RGraph.Text(this.context, this.Get('chart.text.font'), this.Get('chart.text.size'), x, y, this.Get('chart.labels.empty'), 'center', 'center');
+            
+            // Draw the right label
+            var y = this.centery - Math.sin(this.angles.start - PI) * (this.radius - 25);
+            var x = this.centerx + Math.cos(this.angles.start - PI) * (this.radius - 25);
+            RGraph.Text(this.context, this.Get('chart.text.font'), this.Get('chart.text.size'), x, y, this.Get('chart.labels.full'), 'center', 'center');
+        }
     }
 
     
@@ -321,7 +341,7 @@
         this.context.beginPath();
             this.context.fillStyle = grad;
             this.context.moveTo(this.centerx, this.centery);
-            this.context.arc(this.centerx, this.centery, 20, 0, 6.28, 0);
+            this.context.arc(this.centerx, this.centery, 20, 0, TWOPI, 0);
         this.context.fill();
     }
 
@@ -331,6 +351,8 @@
     */
     RGraph.Fuel.prototype.DrawScale = function ()
     {
+        var a, x, y;
+
         //First draw the fill background
         this.context.beginPath();
             this.context.strokeStyle = 'black';
@@ -354,11 +376,36 @@
         this.context.fill();
         
         // This draws the tickmarks
-        for (var a = this.angles.start; a<=this.angles.end+0.01; a+=((this.angles.end - this.angles.start) / 5)) {
+        for (a = this.angles.start; a<=this.angles.end+0.01; a+=((this.angles.end - this.angles.start) / 5)) {
             this.context.beginPath();
                 this.context.arc(this.centerx, this.centery, this.radius - 10, a, a + 0.0001, false);
                 this.context.arc(this.centerx, this.centery, this.radius - 15, a + 0.0001, a, true);
             this.context.stroke();
+        }
+        
+        /**
+        * If chart.scale.visible is specified draw the textual scale
+        */
+        if (this.properties['chart.scale.visible']) {
+
+            this.context.fillStyle = this.properties['chart.text.color'];
+
+            // The labels
+            var numLabels  = this.properties['chart.labels.count'];
+            var decimals   = this.properties['chart.scale.decimals'];
+            var font       = this.properties['chart.text.font'];
+            var size       = this.properties['chart.text.size'];
+            var units_post = this.properties['chart.units.post'];
+            var units_pre  = this.properties['chart.units.pre'];
+
+            for (var i=0; i<=numLabels; ++i) {
+                a = ((this.angles.end - this.angles.start) * (i/numLabels)) + this.angles.start;
+                y = this.centery - Math.sin(a - PI) * (this.radius - 25);
+                x = this.centerx - Math.cos(a - PI) * (this.radius - 25);
+                RGraph.Text(this.context,font,size,x,y,
+                
+                RGraph.number_format(this, (this.min + ((this.max - this.min) * (i/numLabels))).toFixed(decimals),units_pre,units_post),'center','center');
+            }
         }
     }
 
@@ -381,7 +428,7 @@
     */
     RGraph.Fuel.prototype.getValue = function (e)
     {
-        var mouseXY = RGraph.getMouseXY(e)
+        var mouseXY = RGraph.getMouseXY(e);
         var angle   = RGraph.getAngleByXY(this.centerx, this.centery, mouseXY[0], mouseXY[1]);
 
         /**
@@ -448,6 +495,10 @@
             img.onload = function (e)
             {
                 var obj = img.__object__;
+            
+                obj.context.drawImage(img,obj.centerx - (img.width / 2), obj.centery - obj.radius + 35);
+
+                obj.DrawNeedle();
 
                 if (obj.Get('chart.icon.redraw')) {
                     obj.Set('chart.icon.redraw', false);
@@ -455,8 +506,6 @@
                     RGraph.RedrawCanvas(obj.canvas);
                 }
             }
-            
-            this.context.drawImage(img,this.centerx - (img.width / 2), this.centery - this.radius + 35);
         }
 
         this.DrawNeedle();
@@ -480,4 +529,23 @@
             RGraph.RedrawCanvas(this.canvas);
             RGraph.FireCustomEvent(this, 'onadjust');
         }
+    }
+
+
+
+    /**
+    * This method gives you the relevant angle (in radians) that a particular value is
+    * 
+    * @param number value The relevant angle
+    */
+    RGraph.Fuel.prototype.getAngle = function (value)
+    {
+        // Range checking
+        if (value < this.min || value > this.max) {
+            return null;
+        }
+
+        var angle = (((value - this.min) / (this.max - this.min)) * (this.angles.end - this.angles.start)) + this.angles.start;
+
+        return angle;
     }

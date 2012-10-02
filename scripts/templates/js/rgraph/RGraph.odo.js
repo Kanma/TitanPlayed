@@ -127,7 +127,7 @@
             'chart.units.post':             '',
             'chart.value.units.pre':        '',
             'chart.value.units.post':       '',
-            'chart.key':                    [],
+            'chart.key':                    null,
             'chart.key.background':         'white',
             'chart.key.position':           'graph',
             'chart.key.shadow':             false,
@@ -245,7 +245,7 @@
         /**
         * Move the centerx if the key is defined
         */
-        if (this.Get('chart.key').length > 0 && this.canvas.width > this.canvas.height) {
+        if (this.Get('chart.key') && this.Get('chart.key').length > 0 && this.canvas.width > this.canvas.height) {
             this.centerx = 5 + this.radius;
         }
 
@@ -304,7 +304,7 @@
         /**
         * Draw the key if requested
         */
-        if (this.Get('chart.key').length > 0) {
+        if (this.Get('chart.key') && this.Get('chart.key').length > 0) {
             // Build a colors array out of the needle colors
             var colors = [this.Get('chart.needle.color')];
             
@@ -364,7 +364,7 @@
 
         // Draw the grey border
         this.context.fillStyle = backgroundColor;
-        this.context.arc(this.centerx, this.centery, this.radius, 0.0001, 6.28, false);
+        this.context.arc(this.centerx, this.centery, this.radius, 0.0001, TWOPI, false);
         this.context.fill();
 
         /**
@@ -375,12 +375,12 @@
 
         // Draw a circle
         this.context.strokeStyle = '#666';
-        this.context.arc(this.centerx, this.centery, this.radius, 0, 6.28, false);
+        this.context.arc(this.centerx, this.centery, this.radius, 0, TWOPI, false);
 
         // Now draw a big white circle to make the lines appear as tick marks
         // This is solely for Chrome
         this.context.fillStyle = backgroundColor;
-        this.context.arc(this.centerx, this.centery, this.radius, 0, 6.28, false);
+        this.context.arc(this.centerx, this.centery, this.radius, 0, TWOPI, false);
         this.context.fill();
 
         /**
@@ -404,7 +404,7 @@
         // Now draw a big white circle to make the lines appear as tick marks
         this.context.fillStyle = backgroundColor;
         this.context.strokeStyle = backgroundColor;
-        this.context.arc(this.centerx, this.centery, this.radius - 5, 0, 6.28, false);
+        this.context.arc(this.centerx, this.centery, this.radius - 5, 0, TWOPI, false);
         this.context.fill();
         this.context.stroke();
 
@@ -420,7 +420,7 @@
         // Redraw the outer circle
         this.context.beginPath();
         this.context.strokeStyle = 'black';
-        this.context.arc(this.centerx, this.centery, this.radius, 0, 6.2830, false);
+        this.context.arc(this.centerx, this.centery, this.radius, 0, TWOPI, false);
         this.context.stroke();
 
         /**
@@ -429,7 +429,7 @@
         if (this.Get('chart.shadow.inner')) {
             this.context.beginPath();
             RGraph.SetShadow(this, this.Get('chart.shadow.inner.color'), this.Get('chart.shadow.inner.offsetx'), this.Get('chart.shadow.inner.offsety'), this.Get('chart.shadow.inner.blur'));
-            this.context.arc(this.centerx, this.centery, this.radius - this.Get('chart.label.area'), 0, 6.28, 0);
+            this.context.arc(this.centerx, this.centery, this.radius - this.Get('chart.label.area'), 0, TWOPI, 0);
             this.context.fill();
             this.context.stroke();
     
@@ -458,8 +458,8 @@
             this.context.strokeStyle = greengrad;
             this.context.arc(this.centerx, this.centery, this.radius - 2.5,
             
-                -1.57,
-                (((this.Get('chart.green.max') - this.start)/ (this.end - this.start)) * 6.2830) - 1.57,
+                -1 * HALFPI,
+                (((this.Get('chart.green.max') - this.start)/ (this.end - this.start)) * TWOPI) - HALFPI,
                 0);
 
             this.context.stroke();
@@ -473,8 +473,8 @@
                              this.centerx,
                              this.centery,
                              this.radius - this.Get('chart.label.area'),
-                             -1.57,
-                             (((this.Get('chart.green.max') - this.start)/ (this.end - this.start)) * 6.2830) - 1.57,
+                             0 - HALFPI,
+                             (((this.Get('chart.green.max') - this.start)/ (this.end - this.start)) * TWOPI) - HALFPI,
                              false
                             );
             this.context.lineTo(this.centerx, this.centery);
@@ -501,8 +501,8 @@
             this.context.strokeStyle = yellowgrad;
             this.context.arc(this.centerx, this.centery, this.radius - 2.5, (
             
-                ((this.Get('chart.green.max') - this.start) / (this.end - this.start)) * 6.2830) - 1.57,
-                (((this.Get('chart.red.min') - this.start) / (this.end - this.start)) * 6.2830) - 1.57,
+                ((this.Get('chart.green.max') - this.start) / (this.end - this.start)) * TWOPI) - HALFPI,
+                (((this.Get('chart.red.min') - this.start) / (this.end - this.start)) * TWOPI) - HALFPI,
                 0);
 
             this.context.stroke();
@@ -516,8 +516,8 @@
                              this.centerx,
                              this.centery,
                              this.radius - this.Get('chart.label.area'),
-                             ( ((this.Get('chart.green.max') -this.start) / (this.end - this.start)) * 6.2830) - 1.57,
-                             ( ((this.Get('chart.red.min') - this.start) / (this.end - this.start)) * 6.2830) - 1.57,
+                             ( ((this.Get('chart.green.max') -this.start) / (this.end - this.start)) * TWOPI) - HALFPI,
+                             ( ((this.Get('chart.red.min') - this.start) / (this.end - this.start)) * TWOPI) - HALFPI,
                              false
                             );
             this.context.lineTo(this.centerx, this.centery);
@@ -547,7 +547,7 @@
             this.context.beginPath();
             this.context.lineWidth = 5;
             this.context.strokeStyle = redgrad;
-            this.context.arc(this.centerx, this.centery, this.radius - 2.5,(((this.Get('chart.red.min') - this.start) / (this.end - this.start)) * 6.2830) - 1.57,(2 * Math.PI) - (0.5 * Math.PI),0);
+            this.context.arc(this.centerx, this.centery, this.radius - 2.5,(((this.Get('chart.red.min') - this.start) / (this.end - this.start)) * TWOPI) - HALFPI,TWOPI - HALFPI,0);
             this.context.stroke();
             
             this.context.lineWidth = 1;
@@ -560,8 +560,8 @@
                              this.centerx,
                              this.centery,
                              this.radius - this.Get('chart.label.area'),
-                             (((this.Get('chart.red.min') - this.start) / (this.end - this.start)) * 6.2830) - 1.57,
-                             6.2830 - (0.25 * 6.2830),
+                             (((this.Get('chart.red.min') - this.start) / (this.end - this.start)) * TWOPI) - HALFPI,
+                             TWOPI - HALFPI,
                              false
                             );
             this.context.lineTo(this.centerx, this.centery);
@@ -584,8 +584,8 @@
                 this.context.fillStyle = grad;
                 this.context.strokeStyle = 'rgba(0,0,0,0)'
                 this.context.lineWidth = 0.001;
-                this.context.arc(this.centerx, this.centery, this.radius + 20, 0, (2 * Math.PI), 0);
-                this.context.arc(this.centerx, this.centery, this.radius - 2, 6.2830, 0, 1);
+                this.context.arc(this.centerx, this.centery, this.radius + 20, 0, TWOPI, 0);
+                this.context.arc(this.centerx, this.centery, this.radius - 2, TWOPI, 0, 1);
             this.context.fill();
         }
         
@@ -637,7 +637,7 @@
 
         this.context.beginPath();
             this.context.moveTo(this.centerx, this.centery);
-            this.context.arc(this.centerx, this.centery, 10, 0, 6.28, false);
+            this.context.arc(this.centerx, this.centery, 10, 0, TWOPI, false);
             this.context.fill();
         this.context.closePath();
 
@@ -651,7 +651,7 @@
         // Draw the centre bit
         this.context.beginPath();
             this.context.moveTo(this.centerx, this.centery);
-            this.context.arc(this.centerx, this.centery, 8, 0, 6.28, false);
+            this.context.arc(this.centerx, this.centery, 8, 0, TWOPI, false);
             this.context.fill();
         this.context.closePath();
         
@@ -676,8 +676,8 @@
                         this.context.arc(this.centerx,
                                          this.centery,
                                          20,
-                                          (((value / this.range) * 360) + 90) / (180 / Math.PI),
-                                         (((value / this.range) * 360) + 90 + 0.01) / (180 / Math.PI), // The 0.01 avoids a bug in ExCanvas and Chrome 6
+                                          (((value / this.range) * 360) + 90) / (180 / PI),
+                                         (((value / this.range) * 360) + 90 + 0.01) / (180 / PI), // The 0.01 avoids a bug in ExCanvas and Chrome 6
                                          false
                                         );
                     }
@@ -686,8 +686,8 @@
                 this.context.arc(this.centerx,
                                  this.centery,
                                  length - 10,
-                                 (((value / this.range) * 360) - 90) / (180 / Math.PI),
-                                 (((value / this.range) * 360) - 90 + 0.1 ) / (180 / Math.PI), // The 0.1 avoids a bug in ExCanvas and Chrome 6
+                                 (((value / this.range) * 360) - 90) / (180 / PI),
+                                 (((value / this.range) * 360) - 90 + 0.1 ) / (180 / PI), // The 0.1 avoids a bug in ExCanvas and Chrome 6
                                  false
                                 );
             this.context.closePath();
@@ -714,7 +714,7 @@
             this.context.fill();
 
             this.context.beginPath();
-                this.context.arc(this.centerx, this.centery, 15, 0, 6.28, 0);
+                this.context.arc(this.centerx, this.centery, 15, 0, TWOPI, 0);
             this.context.closePath();
             this.context.fill();
 
@@ -733,7 +733,7 @@
             * This is here to accomodate the MSIE/ExCanvas combo
             */
             this.context.beginPath();
-                this.context.arc(this.centerx, this.centery, 7, 0, 6.28, 0);
+                this.context.arc(this.centerx, this.centery, 7, 0, TWOPI, 0);
             this.context.closePath();
             this.context.fill();
         }
@@ -745,7 +745,7 @@
         // Draw the mini center circle
         this.context.beginPath();
         this.context.fillStyle = color;
-            this.context.arc(this.centerx, this.centery, this.Get('chart.needle.type') == 'pointer' ? 7 : 12, 0.01, 6.2830, false);
+            this.context.arc(this.centerx, this.centery, this.Get('chart.needle.type') == 'pointer' ? 7 : 12, 0.01, TWOPI, false);
         this.context.fill();
 
         // This draws the arrow at the end of the line
@@ -814,8 +814,8 @@
                 RGraph.Text(context,
                             font,
                             size,
-                            centerx + (Math.cos(((i / labels.length) * (2 * Math.PI)) - (Math.PI / 2)) * (this.radius - (this.Get('chart.label.area') / 2) ) ), // Sin A = Opp / Hyp
-                            centery + (Math.sin(((i / labels.length) * (2 * Math.PI)) - (Math.PI / 2)) * (this.radius - (this.Get('chart.label.area') / 2) ) ), // Cos A = Adj / Hyp
+                            centerx + (Math.cos(((i / labels.length) * TWOPI) - HALFPI) * (this.radius - (this.Get('chart.label.area') / 2) ) ), // Sin A = Opp / Hyp
+                            centery + (Math.sin(((i / labels.length) * TWOPI) - HALFPI) * (this.radius - (this.Get('chart.label.area') / 2) ) ), // Cos A = Adj / Hyp
                             String(labels[i]),
                             'center',
                             'center');
@@ -870,13 +870,13 @@
     {
         var mouseXY = RGraph.getMouseXY(e)
         var angle   = RGraph.getAngleByXY(this.centerx, this.centery, mouseXY[0], mouseXY[1]);
-            angle  += (Math.PI / 2);
+            angle  += HALFPI;
         
         if (mouseXY[0] >= this.centerx && mouseXY[1] <= this.centery) {
-            angle -= (Math.PI * 2);
+            angle -= TWOPI;
         }
 
-        var value = ((angle / (Math.PI * 2)) * (this.max - this.min)) + this.min;
+        var value = ((angle / TWOPI) * (this.max - this.min)) + this.min;
 
         return value;
     }
@@ -925,4 +925,24 @@
             RGraph.RedrawCanvas(this.canvas);
             RGraph.FireCustomEvent(this, 'onadjust');
         }
+    }
+
+
+
+    /**
+    * This method returns the appropriate angle for a value
+    * 
+    * @param number value The value
+    */
+    RGraph.Odometer.prototype.getAngle = function (value)
+    {
+        // Higher than max or lower than min
+        if (value > this.max || value < this.min) {
+            return null;
+        }
+
+        var angle = (((value - this.min) / (this.max - this.min)) * TWOPI);
+            angle -= HALFPI;
+
+        return angle;
     }

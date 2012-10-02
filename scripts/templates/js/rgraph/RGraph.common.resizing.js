@@ -151,7 +151,6 @@
             context.fill();
             
 
-
             var window_onmousemove = function (e)
             {
                 e = RGraph.FixEventObject(e);
@@ -167,8 +166,11 @@
                     RGraph.FireCustomEvent(canvas.__object__, 'onresize');
                 }
             }
-            window.addEventListener('mousemove', window_onmousemove, false);
-            RGraph.AddEventListener(canvas.id, 'window_mousemove', window_onmousemove);
+            // Install the function as an event listener - but only once
+            if (typeof(canvas.rgraph_resize_window_mousemove_listener_installed) != 'boolean') {
+                window.addEventListener('mousemove', window_onmousemove, false);
+                canvas.rgraph_resize_window_mousemove_listener_installed = true;
+            }
 
             /**
             * The window onmouseup function
@@ -245,8 +247,11 @@
 
 
             var window_onmouseup = MouseupFunc;
-            window.addEventListener('onmouseup', window_onmouseup, false);
-            RGraph.AddEventListener(canvas.id, 'window_mouseup', window_onmouseup);
+            // Install the function as an event listener - but only once
+            if (typeof(canvas.rgraph_resize_window_mouseup_listener_installed) != 'boolean') {
+                window.addEventListener('mouseup', window_onmouseup, false);
+                canvas.rgraph_resize_window_mouseup_listener_installed = true;
+            }
 
 
             var canvas_onmousemove = function (e)
@@ -287,8 +292,11 @@
                     }
                 }
             }
-            canvas.addEventListener('mousemove', canvas_onmousemove, false);
-            RGraph.AddEventListener(canvas.id, 'mousemove', canvas_onmousemove);
+            // Install the function as an event listener - but only once
+            if (typeof(canvas.rgraph_resize_mousemove_listener_installed) != 'boolean') {
+                canvas.addEventListener('mousemove', canvas_onmousemove, false);
+                canvas.rgraph_resize_mousemove_listener_installed = true;
+            }
 
 
 
@@ -297,8 +305,11 @@
                 e.target.style.cursor = 'default';
                 e.target.title        = '';
             }
-            canvas.addEventListener('mouseout', canvas_onmouseout, false);
-            RGraph.AddEventListener(canvas.id, 'mouseout', canvas_onmouseout);
+            // Install the function as an event listener - but only once
+            if (typeof(canvas.rgraph_resize_mouseout_listener_installed) != 'boolean') {
+                canvas.addEventListener('mouseout', canvas_onmouseout, false);
+                canvas.rgraph_resize_mouseout_listener_installed = true;
+            }
 
 
 
@@ -419,8 +430,11 @@
                     RGraph.FireCustomEvent(canvas.__object__, 'onresizeend');
                 }
             }
-            canvas.addEventListener('mousedown', canvas_onmousedown, false);
-            RGraph.AddEventListener(canvas.id, 'mousedown', canvas_onmousedown);
+            // Install the function as an event listener - but only once
+            if (typeof(canvas.rgraph_resize_mousedown_listener_installed) != 'boolean') {
+                canvas.addEventListener('mousedown', canvas_onmousedown, false);
+                canvas.rgraph_resize_mousedown_listener_installed = true;
+            }
 
 
             /**

@@ -75,14 +75,13 @@ entries = json.loads(entries_stringified)
 # Retrieves a sorted list of all the timestamps in the data file, without missing days
 first_day = None
 last_day = None
-keys_to_ignore = [u'last', u'class', u'money', u'level', u'levels_history']
 for name, details in entries.items():
     if first_day is not None:
         last_day = max(last_day, details['last'])
-        first_day = min(first_day, min(map(lambda x: int(x), filter(lambda x: x not in keys_to_ignore, details.keys()))))
+        first_day = min(first_day, min(map(lambda x: int(x), details['sessions'].keys())))
     else:
         last_day = details['last']
-        first_day = min(map(lambda x: int(x), filter(lambda x: x not in keys_to_ignore, details.keys())))
+        first_day = min(map(lambda x: int(x), details['sessions'].keys()))
 
 timestamps = range(first_day, last_day + 1, 3600 * 24)
 

@@ -45,6 +45,7 @@
 
         RGraph.OldBrowserCompat(this.context);
 
+
         this.properties = {
             'chart.colors':                 ['red'],
             'chart.gutter.left':            15,
@@ -95,6 +96,15 @@
             'chart.highlight.stroke':       'rgba(0,0,0,0)',
             'chart.highlight.fill':         'rgba(255,255,255,0.7)'
         }
+
+
+        // The default color is now a gradient
+        var grad = this.context.createLinearGradient(15,0,this.canvas.width - this.Get('chart.gutter.right'), 0);
+        grad.addColorStop(0,'red');
+        grad.addColorStop(0.5,'#f99');
+        grad.addColorStop(1,'red');
+        
+        this.Set('chart.colors', [grad]);
 
         /**
         * A simple check that the browser has canvas support
@@ -252,8 +262,8 @@
             }
 
             context.fillRect(this.gutterLeft + 12,this.gutterTop + bulbRadius,this.canvas.width - this.gutterLeft - this.gutterRight - 24, this.canvas.height - this.gutterTop - this.gutterBottom - bulbRadius - bulbRadius);
-            context.arc(this.gutterLeft + bulbRadius, this.canvas.height - this.gutterBottom - bulbRadius, bulbRadius, 0, 6.28, 0);
-            context.arc(this.gutterLeft + bulbRadius,this.gutterTop + bulbRadius,(this.canvas.width - this.gutterLeft - this.gutterRight - 24)/ 2,0,6.28,0);
+            context.arc(this.gutterLeft + bulbRadius, this.canvas.height - this.gutterBottom - bulbRadius, bulbRadius, 0, TWOPI, 0);
+            context.arc(this.gutterLeft + bulbRadius,this.gutterTop + bulbRadius,(this.canvas.width - this.gutterLeft - this.gutterRight - 24)/ 2,0,TWOPI,0);
         context.fill();
         
         RGraph.NoShadow(this);
@@ -262,14 +272,14 @@
         context.beginPath();
             context.fillStyle = 'white';
             context.fillRect(this.gutterLeft + 12 + 1,this.gutterTop + bulbRadius,this.canvas.width - this.gutterLeft - this.gutterRight - 24 - 2,this.canvas.height - this.gutterTop - this.gutterBottom - bulbRadius - bulbRadius);
-            context.arc(this.gutterLeft + bulbRadius, this.canvas.height - this.gutterBottom - bulbRadius, bulbRadius - 1, 0, 6.28, 0);
-            context.arc(this.gutterLeft + bulbRadius,this.gutterTop + bulbRadius,((this.canvas.width - this.gutterLeft - this.gutterRight - 24)/ 2) - 1,0,6.28,0);
+            context.arc(this.gutterLeft + bulbRadius, this.canvas.height - this.gutterBottom - bulbRadius, bulbRadius - 1, 0, TWOPI, 0);
+            context.arc(this.gutterLeft + bulbRadius,this.gutterTop + bulbRadius,((this.canvas.width - this.gutterLeft - this.gutterRight - 24)/ 2) - 1,0,TWOPI,0);
         context.fill();
 
         // Draw the bottom content of the thermometer
         context.beginPath();
             context.fillStyle = this.Get('chart.colors')[0];
-            context.arc(this.gutterLeft + bulbRadius, this.canvas.height - this.gutterBottom - bulbRadius, bulbRadius - 1, 0, 6.28, 0);
+            context.arc(this.gutterLeft + bulbRadius, this.canvas.height - this.gutterBottom - bulbRadius, bulbRadius - 1, 0, TWOPI, 0);
             context.fillRect(this.gutterLeft + 12 + 1, this.canvas.height - this.gutterBottom - bulbRadius - bulbRadius,this.canvas.width - this.gutterLeft - this.gutterRight - 24 - 2, bulbRadius);
         context.fill();
         
@@ -292,10 +302,10 @@
         // Draw the actual bar that indicates the value
         context.beginPath();
             context.fillStyle = this.Get('chart.colors')[0];
-            context.fillRect(this.graphArea[0],
-                             this.graphArea[1] + this.graphArea[3] - barHeight,
-                             this.graphArea[2],
-                             barHeight);
+            context.rect(this.graphArea[0],
+                         this.graphArea[1] + this.graphArea[3] - barHeight,
+                         this.graphArea[2],
+                         barHeight);
         context.fill();
         
         this.coords[0] = [this.graphArea[0],this.graphArea[1] + this.graphArea[3] - barHeight,this.graphArea[2],barHeight];
@@ -586,4 +596,78 @@
                 RGraph.Redraw();
             }
         }
+    }
+
+
+
+    /**
+    * This function positions a tooltip when it is displayed
+    * 
+    * @param obj object    The chart object
+    * @param int x         The X coordinate specified for the tooltip
+    * @param int y         The Y coordinate specified for the tooltip
+    * @param objec tooltip The tooltips DIV element
+    */
+    RGraph.Thermometer.prototype.positionTooltip = function (obj, x, y, tooltip, idx)
+    {
+        var coordX     = obj.coords[tooltip.__index__][0];
+        var coordY     = obj.coords[tooltip.__index__][1];
+        var coordW     = obj.coords[tooltip.__index__][2];
+        var coordH     = obj.coords[tooltip.__index__][3];
+        var canvasXY   = RGraph.getCanvasXY(obj.canvas);
+        var gutterLeft = obj.Get('chart.gutter.left');
+        var gutterTop  = obj.Get('chart.gutter.top');
+        var width      = tooltip.offsetWidth;
+        var height     = tooltip.offsetHeight;
+
+        // Set the top position
+        tooltip.style.left = 0;
+        tooltip.style.top  = canvasXY[1] + coordY - height - 7 + (coordH / 2)+ 'px';
+        
+        // By default any overflow is hidden
+        tooltip.style.overflow = '';
+
+        // The arrow
+        var img = new Image();
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAARUlEQVQYV2NkQAN79+797+RkhC4M5+/bd47B2dmZEVkBCgcmgcsgbAaA9GA1BCSBbhAuA/AagmwQPgMIGgIzCD0M0AMMAEFVIAa6UQgcAAAAAElFTkSuQmCC';
+            img.style.position = 'absolute';
+            img.id = '__rgraph_tooltip_pointer__';
+            img.style.top = (tooltip.offsetHeight - 2) + 'px';
+        tooltip.appendChild(img);
+        
+        // Reposition the tooltip if at the edges:
+        
+        // LEFT edge
+        if ((canvasXY[0] + coordX - (width / 2)) < 10) {
+            tooltip.style.left = (canvasXY[0] + coordX - (width * 0.1)) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.1) - 8.5) + 'px';
+
+        // RIGHT edge
+        } else if ((canvasXY[0] + coordX + (width / 2)) > document.body.offsetWidth) {
+            tooltip.style.left = canvasXY[0] + coordX - (width * 0.9) + (coordW / 2) + 'px';
+            img.style.left = ((width * 0.9) - 8.5) + 'px';
+
+        // Default positioning - CENTERED
+        } else {
+            tooltip.style.left = (canvasXY[0] + coordX + (coordW / 2) - (width * 0.5)) + 'px';
+            img.style.left = ((width * 0.5) - 8.5) + 'px';
+        }
+    }
+
+
+
+    /**
+    * Returns the appropriate Y coord for a value
+    * 
+    * @param number value The value to return the coord for
+    */
+    RGraph.Thermometer.prototype.getYCoord = function (value)
+    {
+        if (value > this.max || value < this.min) {
+            return null;
+        }
+
+        var y = (this.graphArea[1] + this.graphArea[3]) - (((value - this.min) / (this.max - this.min)) * this.graphArea[3]);
+
+        return y;
     }

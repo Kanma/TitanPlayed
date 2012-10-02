@@ -8,6 +8,7 @@
     <script src="./js/rgraph/RGraph.common.dynamic.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.common.effects.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.common.resizing.js" type="text/javascript"></script>
+	<script src="./js/rgraph/RGraph.common.key.js" ></script>
     <script src="./js/rgraph/RGraph.bar.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.line.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.pie.js" type="text/javascript"></script>
@@ -81,11 +82,11 @@
                         tooltips_stacked[j-1] = new Array();
                     }
 
-                    if (entries[character_names[i]][str_timestamp] !== undefined)
+                    if (entries[character_names[i]].sessions[str_timestamp] !== undefined)
                     {
                         if (previous_timestamp !== null)
                         {
-                            var duration = entries[character_names[i]][str_timestamp] - entries[character_names[i]][previous_timestamp];
+                            var duration = entries[character_names[i]].sessions[str_timestamp].played - entries[character_names[i]].sessions[previous_timestamp].played;
 
                             data[j-1][current_character] = duration / 3600.0;
 
@@ -173,6 +174,7 @@
             // Create the bar chart
             var bar = new RGraph.Bar('graph_character_played', data);
             bar.Set('chart.labels', labels);
+			bar.Set('chart.labels.colors', ['black']);
             bar.Set('chart.tooltips', tooltips);
             bar.Set('chart.gutter.left', 45);
             bar.Set('chart.background.barcolor1', 'white');
@@ -213,8 +215,9 @@
 
         function drawTotalPlayTime()
         {
-            // Prepare the data for the line chart
-            var data = new Array();
+            // Prepare the data for the line charts
+            var data_time = new Array();
+            var data_money = new Array();
             var labels = new Array();
 
             for (var i = 0; i < character_names.length; ++i)
@@ -228,14 +231,18 @@
                     var str_timestamp = Number(timestamps[j]).toString();
 
                     if ((j > 0) && (i == 0))
-                        data[j-1] = 0;
+					{
+                        data_time[j-1] = 0;
+                        data_money[j-1] = 0;
+					}
 
-                    if (entries[character_names[i]][str_timestamp] !== undefined)
+                    if (entries[character_names[i]].sessions[str_timestamp] !== undefined)
                     {
                         if (previous_timestamp !== null)
                         {
-                            var duration = entries[character_names[i]][str_timestamp] - entries[character_names[i]][previous_timestamp];
-                            data[j-1] += duration / 3600.0;
+                            var duration = entries[character_names[i]].sessions[str_timestamp].played - entries[character_names[i]].sessions[previous_timestamp].played;
+                            data_time[j-1] += duration / 3600.0;
+                            data_money[j-1] += entries[character_names[i]].sessions[str_timestamp].money / (100 * 100)
                             previous_timestamp = str_timestamp
                         }
                         else
@@ -248,7 +255,8 @@
 
             var current_year = null;
             var current_month = null;
-            var max_value = 1;
+            var max_value_time = 1;
+            var max_value_money = 1;
 
             for (var j = 1; j < timestamps.length; ++j)
             {
@@ -274,26 +282,87 @@
                     current_year = date.getUTCFullYear();
                 }
 
-                max_value = Math.max(max_value, data[j-1]);
+                max_value_time = Math.max(max_value_time, data_time[j-1]);
+                max_value_money = Math.max(max_value_money, data_money[j-1]);
             }
 
-            max_value = Math.ceil(max_value);
+            max_value_time = Math.ceil(max_value_time);
+            max_value_money = Math.ceil(max_value_money / 10000) * 10000;
 
 
-            // Create the line chart
-            var line = new RGraph.Line('graph_day_played', data);
-            line.Set('chart.labels', labels);
-            line.Set('chart.gutter.left', 45);
-            line.Set('chart.background.barcolor1', 'white');
-            line.Set('chart.background.barcolor2', 'white');
-            line.Set('chart.background.grid', true);
-            line.Set('chart.colors', ['red']);
-            line.Set('chart.linewidth', 2);
-            line.Set('chart.filled', false);
-            line.Set('chart.hmargin', 10);
-            line.Set('chart.units.post', 'h');
-            line.Set('chart.ymax', max_value);
-            line.Draw();
+            // Create the line charts
+            var gutterLeft = 50;
+            var gutterRight = 100;
+            var gutterTop   = 25;
+
+            var line1 = new RGraph.Line('graph_day_played', data_time);
+            line1.Set('chart.labels', labels);
+            line1.Set('chart.gutter.right', gutterRight);
+            line1.Set('chart.gutter.left', gutterLeft);
+            line1.Set('chart.gutter.top', gutterTop);
+			line1.Set('chart.background.barcolor1', 'white');
+            line1.Set('chart.background.barcolor2', 'white');
+			line1.Set('chart.background.grid.autofit.numhlines', max_value_time);
+            line1.Set('chart.background.grid', true);
+            line1.Set('chart.colors', ['red', 'blue']);
+            line1.Set('chart.key', ['Time played', 'Money']);
+            line1.Set('chart.key.position', 'gutter');
+            line1.Set('chart.key.position.gutter.boxed', false);
+            line1.Set('chart.key.position.x', 475);
+            line1.Set('chart.linewidth', 2);
+            line1.Set('chart.filled', false);
+            line1.Set('chart.hmargin', 10);
+            line1.Set('chart.units.post', 'h');
+            line1.Set('chart.ymax', max_value_time);
+            line1.Set('chart.noaxes', true);
+            line1.Set('chart.ylabels', false);
+            line1.Draw();
+
+            var line2 = new RGraph.Line('graph_day_played', data_money);
+            line2.Set('chart.gutter.left', 45);
+            line2.Set('chart.gutter.right', gutterRight);
+            line2.Set('chart.gutter.left', gutterLeft);
+            line2.Set('chart.gutter.top', gutterTop);
+            line2.Set('chart.background.grid', false);
+            line2.Set('chart.colors', ['blue']);
+            line2.Set('chart.linewidth', 2);
+            line2.Set('chart.filled', false);
+            line2.Set('chart.hmargin', 10);
+            line2.Set('chart.units.post', 'po');
+            line2.Set('chart.ymax', max_value_money);
+            line2.Set('chart.noaxes', true);
+            line2.Set('chart.ylabels', false);
+
+            // Draws the extra axes. It's run whenever the line2 object is drawn
+            RGraph.AddCustomEventListener(line2, 'ondraw', function ()
+	            {
+	                RGraph.DrawAxes(line1, {
+	                                        'axis.x': gutterLeft,
+	                                        'axis.color': 'red',
+	                                        'axis.text.color': 'red',
+	                                        'axis.max': max_value_time,
+											'axis.numlabels': max_value_time,
+											'axis.numticks': max_value_time * 2,
+	                                        'axis.min': 0,
+	                                        'axis.align': 'left',
+								            'axis.units.post': 'h',
+											'axis.scale.decimals': 1,
+	                                       });
+	                RGraph.DrawAxes(line2, {
+	                                        'axis.x': line1.canvas.width - gutterRight,
+	                                        'axis.color': 'blue',
+	                                        'axis.text.color': 'blue',
+	                                        'axis.max': max_value_money,
+	                                        'axis.min': 0,
+											'axis.numlabels': max_value_time,
+											'axis.numticks': max_value_time * 2,
+	                                        'axis.align': 'right',
+								            'axis.units.post': 'po',
+	                                       });
+	            }
+			);
+
+            line2.Draw();
         }
 
 
@@ -320,9 +389,9 @@
                     {
                         var str_timestamp = Number(timestamps[start_index]).toString();
 
-                        if (entries[character_names[i]][str_timestamp] !== undefined)
+                        if (entries[character_names[i]].sessions[str_timestamp] !== undefined)
                         {
-                            reference = entries[character_names[i]][str_timestamp];
+                            reference = entries[character_names[i]].sessions[str_timestamp].played;
                             break;
                         }
 
@@ -337,9 +406,9 @@
                         {
                             var str_timestamp = Number(timestamps[start_index]).toString();
 
-                            if (entries[character_names[i]][str_timestamp] !== undefined)
+                            if (entries[character_names[i]].sessions[str_timestamp] !== undefined)
                             {
-                                reference = entries[character_names[i]][str_timestamp];
+                                reference = entries[character_names[i]].sessions[str_timestamp].played;
                                 break;
                             }
 
@@ -348,8 +417,8 @@
                     }
                 }
 
-                var str_last_timestamp = Number(entries[character_names[i]]['last']).toString();
-                var duration = entries[character_names[i]][str_last_timestamp] - reference;
+                var str_last_timestamp = Number(entries[character_names[i]].last).toString();
+                var duration = entries[character_names[i]].sessions[str_last_timestamp].played - reference;
 
                 if (duration > 0)
                 {
