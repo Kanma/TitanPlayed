@@ -1,29 +1,30 @@
 -- ******************************** CONSTANTS *******************************
 
 -- Setup the name we want in the global namespace
-TitanPlayed = {}
+TitanPlayed = {};
+
 -- Reduce the chance of functions and variables colliding with another addon.
-local TP = TitanPlayed
-local LibQTip = LibStub('LibQTip-1.0')
+local TP = TitanPlayed;
+local LibQTip = LibStub('LibQTip-1.0');
 
 TP.id    = "Played";
 TP.addon = "TitanPlayed";
 
 -- These strings will be used for display. Localized strings are outside the scope of this example.
-TP.button_label   = TP.id .. ": "
-TP.menu_text      = TP.id
-TP.tooltip_header = TP.id .. " Info"
-TP.tooltip_hint   = "Hint: Left-click to view your time played on each character"
-TP.menu_hide      = "Hide"
+TP.button_label   = TP.id .. ": ";
+TP.menu_text      = TP.id;
+TP.tooltip_header = TP.id .. " Info";
+TP.tooltip_hint   = "Hint: Left-click to view your time played on each character";
+TP.menu_hide      = "Hide";
 
 --  Get data from the TOC file.
-TP.version = tostring(GetAddOnMetadata(TP.addon, "Version")) or "Unknown"
-TP.author  = GetAddOnMetadata(TP.addon, "Author") or "Unknown"
+TP.version = tostring(GetAddOnMetadata(TP.addon, "Version")) or "Unknown";
+TP.author  = GetAddOnMetadata(TP.addon, "Author") or "Unknown";
 
 
 -- ***************************** SAVED VARIABLES ****************************
 
-TitanPlayedTimes = {}
+TitanPlayedTimes = {};
 
 
 -- ******************************** VARIABLES *******************************
@@ -78,7 +79,7 @@ function TP.Button_OnLoad(self)
     self:RegisterEvent("PLAYER_LEAVING_WORLD");
     self:RegisterEvent("TIME_PLAYED_MSG");
 
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", chat_filter)
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", chat_filter);
 end
 
 
@@ -96,25 +97,25 @@ function TP.Button_OnEvent(self, event, ...)
 
         if (TitanPlayedTimes[name] == nil) then
             localizedClass, englishClass = UnitClass("player");
-            TitanPlayedTimes[name] = {}
-            TitanPlayedTimes[name].class = englishClass
+            TitanPlayedTimes[name] = {};
+            TitanPlayedTimes[name].class = englishClass;
         end
 
         if (TitanPlayedTimes[name][current_entry] == nil) then
-            TitanPlayedTimes[name][current_entry] = 0
-            TitanPlayedTimes[name].last = current_entry
+            TitanPlayedTimes[name][current_entry] = 0;
+            TitanPlayedTimes[name].last = current_entry;
         end
 
     elseif (event == "PLAYER_LEAVING_WORLD") then
-        local current_time = time()
-        local dest_entry = current_time - (current_time % (3600 * 24))
+        local current_time = time();
+        local dest_entry = current_time - (current_time % (3600 * 24));
 
         if (dest_entry ~= current_entry) then
             TitanPlayedTimes[name][dest_entry] = TitanPlayedTimes[name][current_entry] + (current_time - reference_time);
             TitanPlayedTimes[name][current_entry] = TitanPlayedTimes[name][current_entry] + (dest_entry - reference_time);
-            current_entry = dest_entry
-            reference_time = dest_entry
-            TitanPlayedTimes[name].last = current_entry
+            current_entry = dest_entry;
+            reference_time = dest_entry;
+            TitanPlayedTimes[name].last = current_entry;
         else
             TitanPlayedTimes[name][current_entry] = TitanPlayedTimes[name][current_entry] + (current_time - reference_time);
             reference_time = current_time;
@@ -123,85 +124,85 @@ function TP.Button_OnEvent(self, event, ...)
     elseif (event == "TIME_PLAYED_MSG") then
         local arg1, arg2 = ...;
 
-        local current_time = time()
-        local dest_entry = current_time - (current_time % (3600 * 24))
+        local current_time = time();
+        local dest_entry = current_time - (current_time % (3600 * 24));
 
         if (dest_entry ~= current_entry) then
-            TitanPlayedTimes[name][dest_entry] = arg1
-            TitanPlayedTimes[name][current_entry] = arg1 - (current_time - dest_entry)
-            current_entry = dest_entry
-            TitanPlayedTimes[name].last = current_entry
+            TitanPlayedTimes[name][dest_entry] = arg1;
+            TitanPlayedTimes[name][current_entry] = arg1 - (current_time - dest_entry);
+            current_entry = dest_entry;
+            TitanPlayedTimes[name].last = current_entry;
         else
-            TitanPlayedTimes[name][current_entry] = arg1
+            TitanPlayedTimes[name][current_entry] = arg1;
         end
 
         reference_time = current_time;
 
         if (must_display_tooltip) then
-            self.tooltip = LibQTip:Acquire("TitanPlayed_Tooltip", 2, "LEFT", "LEFT")
-            self.tooltip:Clear()
+            self.tooltip = LibQTip:Acquire("TitanPlayed_Tooltip", 2, "LEFT", "LEFT");
+            self.tooltip:Clear();
 
-            local sorted_keys = {}
+            local sorted_keys = {};
             for n, v in pairs(TitanPlayedTimes) do table.insert(sorted_keys, n) end
 
-            table.sort(sorted_keys, function(a,b) return TitanPlayedTimes[a][TitanPlayedTimes[a].last] > TitanPlayedTimes[b][TitanPlayedTimes[b].last] end)
+            table.sort(sorted_keys, function(a,b) return TitanPlayedTimes[a][TitanPlayedTimes[a].last] > TitanPlayedTimes[b][TitanPlayedTimes[b].last] end);
 
-            local redFont = CreateFont("RedFont")
-            redFont:CopyFontObject(GameTooltipText)
-            redFont:SetTextColor(1,0.6,0)
+            local redFont = CreateFont("RedFont");
+            redFont:CopyFontObject(GameTooltipText);
+            redFont:SetTextColor(1,0.6,0);
 
             for index, name in ipairs(sorted_keys) do
-                local y, x = self.tooltip:AddLine()
+                local y, x = self.tooltip:AddLine();
 
-                local characterFont = CreateFont(name .. "Font")
-                characterFont:CopyFontObject(GameTooltipText)
+                local characterFont = CreateFont(name .. "Font");
+                characterFont:CopyFontObject(GameTooltipText);
 
-                if TitanPlayedTimes[name].class == 'DEATHKNIGHT' then characterFont:SetTextColor(0.77, 0.12, 0.23)
-                elseif TitanPlayedTimes[name].class == 'DRUID' then characterFont:SetTextColor(1.00, 0.49, 0.04)
-                elseif TitanPlayedTimes[name].class == 'HUNTER' then characterFont:SetTextColor(0.67, 0.83, 0.45)
-                elseif TitanPlayedTimes[name].class == 'MAGE' then characterFont:SetTextColor(0.41, 0.80, 0.94)
-                elseif TitanPlayedTimes[name].class == 'MONK' then characterFont:SetTextColor(0.33, 0.54, 0.52)
-                elseif TitanPlayedTimes[name].class == 'PALADIN' then characterFont:SetTextColor(0.96, 0.55, 0.73)
-                elseif TitanPlayedTimes[name].class == 'PRIEST' then characterFont:SetTextColor(1.00, 1.00, 1.00)
-                elseif TitanPlayedTimes[name].class == 'ROGUE' then characterFont:SetTextColor(1.00, 0.96, 0.41)
-                elseif TitanPlayedTimes[name].class == 'SHAMAN' then characterFont:SetTextColor(0.0, 0.44, 0.87)
-                elseif TitanPlayedTimes[name].class == 'WARLOCK' then characterFont:SetTextColor(0.58, 0.51, 0.7)
-                elseif TitanPlayedTimes[name].class == 'WARRIOR' then characterFont:SetTextColor(0.78, 0.61, 0.43)
+                if TitanPlayedTimes[name].class == 'DEATHKNIGHT' then characterFont:SetTextColor(0.77, 0.12, 0.23);
+                elseif TitanPlayedTimes[name].class == 'DRUID' then characterFont:SetTextColor(1.00, 0.49, 0.04);
+                elseif TitanPlayedTimes[name].class == 'HUNTER' then characterFont:SetTextColor(0.67, 0.83, 0.45);
+                elseif TitanPlayedTimes[name].class == 'MAGE' then characterFont:SetTextColor(0.41, 0.80, 0.94);
+                elseif TitanPlayedTimes[name].class == 'MONK' then characterFont:SetTextColor(0.33, 0.54, 0.52);
+                elseif TitanPlayedTimes[name].class == 'PALADIN' then characterFont:SetTextColor(0.96, 0.55, 0.73);
+                elseif TitanPlayedTimes[name].class == 'PRIEST' then characterFont:SetTextColor(1.00, 1.00, 1.00);
+                elseif TitanPlayedTimes[name].class == 'ROGUE' then characterFont:SetTextColor(1.00, 0.96, 0.41);
+                elseif TitanPlayedTimes[name].class == 'SHAMAN' then characterFont:SetTextColor(0.0, 0.44, 0.87);
+                elseif TitanPlayedTimes[name].class == 'WARLOCK' then characterFont:SetTextColor(0.58, 0.51, 0.7);
+                elseif TitanPlayedTimes[name].class == 'WARRIOR' then characterFont:SetTextColor(0.78, 0.61, 0.43);
                 end
 
-                self.tooltip:SetCell(y, 1, name, characterFont)
+                self.tooltip:SetCell(y, 1, name, characterFont);
 
-                local played = TitanPlayedTimes[name][TitanPlayedTimes[name].last]
+                local played = TitanPlayedTimes[name][TitanPlayedTimes[name].last];
 
-                local modulo_days = played % (3600 * 24)
-                local days = (played - modulo_days) / (3600 * 24)
-                local modulo_hours = modulo_days % 3600
-                local hours = (modulo_days - modulo_hours) / 3600
-                local seconds = modulo_hours % 60
-                local minutes = (modulo_hours - seconds) / 60
+                local modulo_days = played % (3600 * 24);
+                local days = (played - modulo_days) / (3600 * 24);
+                local modulo_hours = modulo_days % 3600;
+                local hours = (modulo_days - modulo_hours) / 3600;
+                local seconds = modulo_hours % 60;
+                local minutes = (modulo_hours - seconds) / 60;
 
-                local str = ''
+                local str = '';
 
                 if (days < 10) then str = str .. '0' end
-                str = str .. days .. 'd '
+                str = str .. days .. 'd ';
 
                 if (hours < 10) then str = str .. '0' end
-                str = str .. hours .. 'h '
+                str = str .. hours .. 'h ';
 
                 if (minutes < 10) then str = str .. '0' end
-                str = str .. minutes .. 'm '
+                str = str .. minutes .. 'm ';
 
                 if (seconds < 10) then str = str .. '0' end
-                str = str .. seconds .. 's'
+                str = str .. seconds .. 's';
 
-                self.tooltip:SetCell(y, 2, str, redFont)
+                self.tooltip:SetCell(y, 2, str, redFont);
             end
 
-            self.tooltip:SetAutoHideDelay(0.01, self)
-            self.tooltip:SmartAnchorTo(self)
-            self.tooltip:Show()
+            self.tooltip:SetAutoHideDelay(0.01, self);
+            self.tooltip:SmartAnchorTo(self);
+            self.tooltip:Show();
 
-            must_display_tooltip = false
+            must_display_tooltip = false;
         end
     end
 end
@@ -215,7 +216,7 @@ end
 -- --------------------------------------------------------------------------
 function TP.Button_OnClick(self, button)
     if self.tooltip then
-        LibQTip:Release(self.tooltip)
+        LibQTip:Release(self.tooltip);
     end
 end
 
@@ -227,10 +228,10 @@ end
 -- --------------------------------------------------------------------------
 function TP.Button_OnEnter(self)
     if self.tooltip then
-        LibQTip:Release(self.tooltip)
+        LibQTip:Release(self.tooltip);
     end
 
-    must_display_tooltip = true
+    must_display_tooltip = true;
     RequestTimePlayed();
 end
 
