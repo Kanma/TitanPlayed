@@ -219,11 +219,14 @@
             var data_time = new Array();
             var data_money = new Array();
             var labels = new Array();
+            var last_money = new Array();
 
             for (var i = 0; i < character_names.length; ++i)
             {
                 if (characters_to_ignore.indexOf(character_names[i]) !== -1)
                     continue;
+
+                last_money[i] = 0;
 
                 var previous_timestamp = null;
                 for (var j = 0; j < timestamps.length; ++j)
@@ -244,14 +247,20 @@
                             data_time[j-1] += duration / 3600.0;
 
                             if (entries[character_names[i]].sessions[str_timestamp].money !== undefined)
-                                data_money[j-1] += entries[character_names[i]].sessions[str_timestamp].money / (100 * 100)
+                                last_money[i] = entries[character_names[i]].sessions[str_timestamp].money;
 
-                            previous_timestamp = str_timestamp
+                            data_money[j-1] += last_money[i];
+
+                            previous_timestamp = str_timestamp;
                         }
                         else
                         {
                             previous_timestamp = str_timestamp;
                         }
+                    }
+                    else if (previous_timestamp !== null)
+                    {
+                        data_money[j-1] += last_money[i];
                     }
                 }
             }
@@ -260,6 +269,8 @@
             var current_month = null;
             var max_value_time = 1;
             var max_value_money = 1;
+            var min_value_money = 0;
+            var money_started = false;
 
             for (var j = 1; j < timestamps.length; ++j)
             {
@@ -285,12 +296,37 @@
                     current_year = date.getUTCFullYear();
                 }
 
+                if (!money_started && (data_money[j-1] == 0))
+                {
+                    data_money[j-1] = null;
+                }
+                else
+                {
+                    data_money[j-1] = data_money[j-1] / (100 * 100);
+                    max_value_money = Math.max(max_value_money, data_money[j-1]);
+
+                    if (money_started)
+                    {
+                        min_value_money = Math.min(min_value_money, data_money[j-1]);
+                    }
+                    else
+                    {
+                        min_value_money = data_money[j-1];
+                        money_started = true;
+                    }
+                }
+
                 max_value_time = Math.max(max_value_time, data_time[j-1]);
-                max_value_money = Math.max(max_value_money, data_money[j-1]);
             }
 
             max_value_time = Math.ceil(max_value_time);
-            max_value_money = Math.ceil(max_value_money / 10000) * 10000;
+
+            var money_diff = max_value_money - min_value_money;
+            var exponent = Math.floor(Math.log(money_diff) / Math.log(10));
+            var factor = Math.pow(10, exponent);
+
+            max_value_money = Math.ceil(max_value_money / factor) * factor;
+            min_value_money = Math.floor(min_value_money / factor) * factor;
 
 
             // Create the line charts
@@ -333,6 +369,7 @@
             line2.Set('chart.hmargin', 10);
             line2.Set('chart.units.post', 'po');
             line2.Set('chart.ymax', max_value_money);
+            line2.Set('chart.ymin', min_value_money);
             line2.Set('chart.noaxes', true);
             line2.Set('chart.ylabels', false);
 
@@ -356,7 +393,7 @@
                                             'axis.color': 'blue',
                                             'axis.text.color': 'blue',
                                             'axis.max': max_value_money,
-                                            'axis.min': 0,
+                                            'axis.min': min_value_money,
                                             'axis.numlabels': max_value_time,
                                             'axis.numticks': max_value_time * 2,
                                             'axis.align': 'right',
