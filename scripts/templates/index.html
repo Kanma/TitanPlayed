@@ -56,6 +56,9 @@
             var color_cell = document.createElement('td');
             color_cell.style.width = '25px';
             color_cell.style.backgroundColor = getColor(character_name);
+            color_cell.style.borderWidth = '1px';
+            color_cell.style.borderColor = '#000';
+            color_cell.style.borderStyle = 'solid';
             row.appendChild(color_cell);
 
             var name_cell = document.createElement('td');
