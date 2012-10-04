@@ -132,6 +132,7 @@ function TP.Button_OnEvent(self, event, ...)
         end
 
     elseif (event == "PLAYER_LEVEL_UP") then
+        local arg1 = ...;
         TitanPlayedTimes[name].level = arg1;
         TitanPlayedTimes[name].levels_history[arg1] = time();
 
