@@ -344,6 +344,14 @@
 
             max_value_time = Math.ceil(max_value_time);
 
+            if (max_value_money == min_value_money) {
+                max_value_money = max_value_money + 1000;
+                min_value_money = min_value_money - 1000;
+                if (min_value_money < 0) {
+                    min_value_money = 0;
+                }
+            }
+
             var money_diff = max_value_money - min_value_money;
             var exponent = Math.floor(Math.log(money_diff) / Math.log(10));
             var factor = Math.pow(10, exponent);
