@@ -49,13 +49,31 @@
         }
 
 
-        function drawPerCharacterPlayTime()
+        function createRowLegend(character_name)
+        {
+            var row = document.createElement('tr');
+
+            var color_cell = document.createElement('td');
+            color_cell.style.width = '25px';
+            color_cell.style.backgroundColor = getColor(character_name);
+            row.appendChild(color_cell);
+
+            var name_cell = document.createElement('td');
+            name_cell.textContent = character_name;
+            row.appendChild(name_cell);
+
+            return row;
+        }
+
+        function drawPerCharacterPlayTimeAndMoney()
         {
             // Prepare the data for the bar chart
             var data = new Array();
+            var data_money = new Array();
             var colors = new Array();
             var labels = new Array();
             var tooltips_stacked = new Array();
+            var tooltips_stacked_money = new Array();
 
             var offset = Math.max(timestamps.length - 15, 0);
             var date_start = new Date(timestamps[offset + 1] * 1000);
@@ -80,6 +98,8 @@
                     {
                         data[j-1] = new Array();
                         tooltips_stacked[j-1] = new Array();
+                        data_money[j-1] = new Array();
+                        tooltips_stacked_money[j-1] = new Array();
                     }
 
                     if (entries[character_names[i]].sessions[str_timestamp] !== undefined)
@@ -121,11 +141,29 @@
                                 tooltips_stacked[j-1][current_character] = '';
                             }
                         }
+                        if (j > offset)
+                        {
+                            var amount = 0;
+                            if (entries[character_names[i]].sessions[str_timestamp].money !== undefined)
+                                amount = entries[character_names[i]].sessions[str_timestamp].money / 10000;
+                            data_money[j-1][current_character] = amount;
+                            var money_po = Math.floor(amount);
+                            var money_pa = Math.floor(amount * 100 % 100);
+                            var money_pc = amount * 10000 % 100;
+                            var text_money = character_names[i] + ' (';
+                            text_money += money_po + ' po '
+                            text_money += money_pa + ' pa '
+                            text_money += money_pc + ' pc'
+                            text_money += ')';
+                            tooltips_stacked_money[j-1][current_character] = text_money;
+                        }
                     }
                     else if (j > offset)
                     {
                         data[j-1][current_character] = 0;
                         tooltips_stacked[j-1][current_character] = '';
+                        data_money[j-1][current_character] = 0;
+                        tooltips_stacked_money[j-1][current_character] = '';
                     }
                 }
 
@@ -139,10 +177,18 @@
                     tooltips[j * tooltips_stacked[j].length + i] = tooltips_stacked[j][i];
             }
 
+            var tooltips_money = new Array();
+            for (var j = 0; j < tooltips_stacked_money.length; ++j)
+            {
+                for (var i = 0; i < tooltips_stacked_money[j].length; ++i)
+                    tooltips_money[j * tooltips_stacked_money[j].length + i] = tooltips_stacked_money[j][i];
+            }
+
 
             var current_year = null;
             var current_month = null;
             var max_value = 1;
+            var max_value_money = 1;
 
             for (var j = 1; j < timestamps.length; ++j)
             {
@@ -166,9 +212,15 @@
                 for (var i = 0; i < data[j-1].length; ++i)
                     total += data[j-1][i];
                 max_value = Math.max(max_value, total);
+
+                var total_money = 0;
+                for (var i = 0; i < data_money[j-1].length; ++i)
+                    total_money += data_money[j-1][i];
+                max_value_money = Math.max(max_value_money, total_money);
             }
 
             max_value = Math.ceil(max_value);
+            max_value_money = Math.ceil(max_value_money);
 
 
             // Create the bar chart
@@ -212,26 +264,34 @@
 
             bar.Draw();
 
+            var bar_money = new RGraph.Bar('graph_character_money', data_money);
+            bar_money.Set('chart.labels', labels);
+            bar_money.Set('chart.labels.colors', ['black']);
+            bar_money.Set('chart.tooltips', tooltips_money);
+            bar_money.Set('chart.gutter.left', 80);
+            bar_money.Set('chart.background.barcolor1', 'white');
+            bar_money.Set('chart.background.barcolor2', 'white');
+            bar_money.Set('chart.background.grid', true);
+            bar_money.Set('chart.colors', colors);
+            bar_money.Set('chart.grouping', 'stacked');
+            bar_money.Set('chart.hmargin', 10);
+            bar_money.Set('chart.strokestyle', '#000000');
+            bar_money.Set('chart.ymax', max_value_money);
+            bar_money.Set('chart.variant', '3d');
+            bar_money.Set('chart.units.post', ' po');
+            bar_money.Draw();
+
 
             // Fill the legend panel
             var legend = $('#legend');
+            var legend_money = $('#legend_money');
             for (var i = 0; i < character_names.length; ++i)
             {
                 if (characters_to_ignore.indexOf(character_names[i]) !== -1)
                     continue;
 
-                var row = document.createElement('tr');
-
-                var color_cell = document.createElement('td');
-                color_cell.style.width = '25px';
-                color_cell.style.backgroundColor = getColor(character_names[i]);
-                row.appendChild(color_cell);
-
-                var name_cell = document.createElement('td');
-                name_cell.textContent = character_names[i];
-                row.appendChild(name_cell);
-
-                legend.append(row);
+                legend.append(createRowLegend(character_names[i]));
+                legend_money.append(createRowLegend(character_names[i]));
             }
         }
 
@@ -343,6 +403,14 @@
             }
 
             max_value_time = Math.ceil(max_value_time);
+
+            if (max_value_money == min_value_money) {
+                max_value_money = max_value_money + 1000;
+                min_value_money = min_value_money - 1000;
+                if (min_value_money < 0) {
+                    min_value_money = 0;
+                }
+            }
 
             var money_diff = max_value_money - min_value_money;
             var exponent = Math.floor(Math.log(money_diff) / Math.log(10));
@@ -537,6 +605,23 @@
     </div>
 
     <div>
+        <h2>Money on each character</h2>
+        <table>
+            <tr>
+                <td colspan="2" id="graph_character_money_title"></td>
+            </tr>
+            <tr>
+                <td>
+                    <canvas id="graph_character_money" width="1000" height="600" style="cursor: default;"></canvas>
+                </td>
+                <td>
+                    <table id="legend_money"></table>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div>
         <h2>Time played per day</h2>
         <canvas id="graph_day_played" width="1000" height="600" style="cursor: default;"></canvas>
     </div>
@@ -584,7 +669,7 @@
     <script type="text/javascript">
         window.onload = function ()
         {
-            drawPerCharacterPlayTime();
+            drawPerCharacterPlayTimeAndMoney();
             drawTotalPlayTime();
             drawCharactersPie('graph_characters_pie_all', null);
             drawCharactersPie('graph_characters_pie_2_months', 60);
