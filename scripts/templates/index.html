@@ -172,11 +172,13 @@
 
 
             // Create the bar chart
+            var gutterLeft = 50;
+
             var bar = new RGraph.Bar('graph_character_played', data);
             bar.Set('chart.labels', labels);
             bar.Set('chart.labels.colors', ['black']);
             bar.Set('chart.tooltips', tooltips);
-            bar.Set('chart.gutter.left', 45);
+            bar.Set('chart.gutter.left', gutterLeft);
             bar.Set('chart.background.barcolor1', 'white');
             bar.Set('chart.background.barcolor2', 'white');
             bar.Set('chart.background.grid', true);
@@ -184,9 +186,30 @@
             bar.Set('chart.grouping', 'stacked');
             bar.Set('chart.hmargin', 10);
             bar.Set('chart.strokestyle', '#000000');
-            bar.Set('chart.units.post', 'h');
             bar.Set('chart.ymax', max_value);
             bar.Set('chart.variant', '3d');
+            bar.Set('chart.background.grid.autofit.numhlines', max_value);
+            bar.Set('chart.noaxes', true);
+            bar.Set('chart.ylabels', false);
+
+            // Draws the extra axe. It's run whenever the bar object is drawn
+            RGraph.AddCustomEventListener(bar, 'ondraw', function ()
+                {
+                    RGraph.DrawAxes(bar, {
+                                          'axis.x': gutterLeft,
+                                          'axis.color': 'black',
+                                          'axis.text.color': 'black',
+                                          'axis.max': max_value,
+                                          'axis.numlabels': max_value,
+                                          'axis.numticks': max_value * 2,
+                                          'axis.min': 0,
+                                          'axis.align': 'left',
+                                          'axis.units.post': 'h',
+                                          'axis.scale.decimals': 0,
+                                         });
+                }
+            );
+
             bar.Draw();
 
 
@@ -386,7 +409,7 @@
                                             'axis.min': 0,
                                             'axis.align': 'left',
                                             'axis.units.post': 'h',
-                                            'axis.scale.decimals': 1,
+                                            'axis.scale.decimals': 0,
                                            });
                     RGraph.DrawAxes(line2, {
                                             'axis.x': line1.canvas.width - gutterRight,
