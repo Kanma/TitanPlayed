@@ -49,6 +49,13 @@
         }
 
 
+        function getScaleFactor(value)
+        {
+            var exponent = Math.floor(Math.log(value) / Math.log(10));
+            return Math.pow(10, exponent);
+        }
+
+
         function createRowLegend(character_name)
         {
             var row = document.createElement('tr');
@@ -70,6 +77,7 @@
             // Prepare the data for the bar chart
             var data = new Array();
             var data_money = new Array();
+            var last_money = new Array();
             var colors = new Array();
             var labels = new Array();
             var tooltips_stacked = new Array();
@@ -88,6 +96,7 @@
                     continue;
 
                 colors[current_character] = getColor(character_names[i]);
+                last_money[i] = 0;
 
                 var previous_timestamp = null;
                 for (var j = offset; j < timestamps.length; ++j)
@@ -141,29 +150,34 @@
                                 tooltips_stacked[j-1][current_character] = '';
                             }
                         }
+
                         if (j > offset)
                         {
-                            var amount = 0;
                             if (entries[character_names[i]].sessions[str_timestamp].money !== undefined)
-                                amount = entries[character_names[i]].sessions[str_timestamp].money / 10000;
-                            data_money[j-1][current_character] = amount;
-                            var money_po = Math.floor(amount);
-                            var money_pa = Math.floor(amount * 100 % 100);
-                            var money_pc = amount * 10000 % 100;
-                            var text_money = character_names[i] + ' (';
-                            text_money += money_po + ' po '
-                            text_money += money_pa + ' pa '
-                            text_money += money_pc + ' pc'
-                            text_money += ')';
-                            tooltips_stacked_money[j-1][current_character] = text_money;
+                                last_money[i] = entries[character_names[i]].sessions[str_timestamp].money / 10000;
+
+                            data_money[j-1][current_character] = last_money[i];
                         }
                     }
                     else if (j > offset)
                     {
                         data[j-1][current_character] = 0;
                         tooltips_stacked[j-1][current_character] = '';
-                        data_money[j-1][current_character] = 0;
-                        tooltips_stacked_money[j-1][current_character] = '';
+                        data_money[j-1][current_character] = last_money[i];
+                    }
+
+                    if (j > offset)
+                    {
+                        var money_po = Math.floor(last_money[i]);
+                        var money_pa = Math.floor((last_money[i] * 100) % 100);
+                        var money_pc = Math.floor((last_money[i] * 10000) % 100);
+
+                        var text_money = character_names[i] + ' (';
+                        text_money += money_po + ' po '
+                        text_money += money_pa + ' pa '
+                        text_money += money_pc + ' pc'
+                        text_money += ')';
+                        tooltips_stacked_money[j-1][current_character] = text_money;
                     }
                 }
 
@@ -220,7 +234,9 @@
             }
 
             max_value = Math.ceil(max_value);
-            max_value_money = Math.ceil(max_value_money);
+
+            var factor = getScaleFactor(max_value_money);
+            max_value_money = Math.ceil(max_value_money / factor) * factor;
 
 
             // Create the bar chart
@@ -412,9 +428,7 @@
                 }
             }
 
-            var money_diff = max_value_money - min_value_money;
-            var exponent = Math.floor(Math.log(money_diff) / Math.log(10));
-            var factor = Math.pow(10, exponent);
+            var factor = getScaleFactor(max_value_money - min_value_money);
 
             max_value_money = Math.ceil(max_value_money / factor) * factor;
             min_value_money = Math.floor(min_value_money / factor) * factor;
