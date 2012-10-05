@@ -87,7 +87,7 @@
             var tooltips_stacked = new Array();
             var tooltips_stacked_money = new Array();
 
-            var offset = Math.max(timestamps.length - 15, 0);
+            var offset = Math.max(timestamps.length - 16, 0);
             var date_start = new Date(timestamps[offset + 1] * 1000);
             var date_end = new Date(timestamps[timestamps.length-1] * 1000);
 
@@ -103,11 +103,11 @@
                 last_money[i] = 0;
 
                 var previous_timestamp = null;
-                for (var j = offset; j < timestamps.length; ++j)
+                for (var j = 0; j < timestamps.length - offset; ++j)
                 {
-                    var str_timestamp = Number(timestamps[j]).toString();
+                    var str_timestamp = Number(timestamps[j + offset]).toString();
 
-                    if ((j > offset) && (i == 0))
+                    if ((j > 0) && (i == 0))
                     {
                         data[j-1] = new Array();
                         tooltips_stacked[j-1] = new Array();
@@ -148,14 +148,14 @@
                         else
                         {
                             previous_timestamp = str_timestamp;
-                            if (j > offset)
+                            if (j > 0)
                             {
                                 data[j-1][current_character] = 0;
                                 tooltips_stacked[j-1][current_character] = '';
                             }
                         }
 
-                        if (j > offset)
+                        if (j > 0)
                         {
                             if (entries[character_names[i]].sessions[str_timestamp].money !== undefined)
                                 last_money[i] = entries[character_names[i]].sessions[str_timestamp].money / 10000;
@@ -163,14 +163,14 @@
                             data_money[j-1][current_character] = last_money[i];
                         }
                     }
-                    else if (j > offset)
+                    else if (j > 0)
                     {
                         data[j-1][current_character] = 0;
                         tooltips_stacked[j-1][current_character] = '';
                         data_money[j-1][current_character] = last_money[i];
                     }
 
-                    if (j > offset)
+                    if (j > 0)
                     {
                         var money_po = Math.floor(last_money[i]);
                         var money_pa = Math.floor((last_money[i] * 100) % 100);
@@ -208,9 +208,9 @@
             var max_value = 1;
             var max_value_money = 1;
 
-            for (var j = 1; j < timestamps.length; ++j)
+            for (var j = 1; j < timestamps.length - offset; ++j)
             {
-                var date = new Date(timestamps[j] * 1000);
+                var date = new Date(timestamps[j + offset] * 1000);
 
                 labels[j-1] = date.getUTCDate();
 
@@ -583,8 +583,7 @@
 
             for (var i = 0; i < data.length; ++i)
             {
-                var percentage = 100.0 * data[i] / total;
-                percentage = percentage - ((percentage * 100) % 100) / 100;
+                var percentage = Math.floor(100.0 * data[i] / total);
                 labels[i] += ' (' + percentage + '%)'
             }
 
