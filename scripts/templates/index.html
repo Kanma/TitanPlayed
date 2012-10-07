@@ -117,8 +117,8 @@
             // Store the timestamps of the concerned period
             storage.timestamps = timestamps.slice(offset);
 
-            // Search the list of enabled characters and their first timestamp before the period
-            var first_timestamps = new Array();
+            // Search the list of enabled characters and their last values before the period
+            var last_values = new Array();
             var current_character = 0;
             storage.characters = new Array();
             for (var i = 0; i < character_names.length; ++i)
@@ -128,11 +128,13 @@
 
                 storage.characters[current_character] = character_names[i];
 
-                for (var j = 0; j < timestamps.length - offset + 1; ++j)
+                last_values[current_character] = null;
+
+                for (var j = offset - 1; j >= 0; --j)
                 {
-                    if (entries[character_names[i]].sessions[timestamps[j + offset - 1]] !== undefined)
+                    if (entries[character_names[current_character]].sessions[timestamps[j]] !== undefined)
                     {
-                        first_timestamps[current_character] = timestamps[j + offset - 1];
+                        last_values[current_character] = entries[character_names[i]].sessions[timestamps[j]];
                         break;
                     }
                 }
@@ -151,22 +153,13 @@
 
                 callbacks.onCharacterStarted(storage, current_character);
 
-                var previous_values = entries[character_names[i]].sessions[first_timestamps[current_character]];
+                var previous_values = last_values[current_character];
 
                 for (var j = 0; j < storage.timestamps.length; ++j)
                 {
                     var timestamp = storage.timestamps[j];
 
-                    if (timestamp < first_timestamps[current_character])
-                    {
-                        callbacks.onData(storage, current_character, j, null, null);
-                    }
-                    else if (timestamp == first_timestamps[current_character])
-                    {
-                        previous_values = entries[character_names[i]].sessions[timestamp];
-                        callbacks.onData(storage, current_character, j, previous_values, null);
-                    }
-                    else if (entries[character_names[i]].sessions[timestamp] !== undefined)
+                    if (entries[character_names[i]].sessions[timestamp] !== undefined)
                     {
                         callbacks.onData(storage, current_character, j, entries[character_names[i]].sessions[timestamp], previous_values);
                         previous_values = entries[character_names[i]].sessions[timestamp];
@@ -265,6 +258,16 @@
             }
             
             return result;
+        }
+        
+        
+        function moneyAsText(gold)
+        {
+            var money_po = Math.floor(gold);
+            var money_pa = Math.floor((gold * 100) % 100);
+            var money_pc = Math.floor((gold * 10000) % 100);
+
+            return '' + money_po + ' po ' + money_pa + ' pa ' + money_pc + ' pc';
         }
 
 
@@ -389,6 +392,74 @@
         }
 
 
+        function drawFortune()
+        {
+            // Prepare the data for the pie chart
+            var storage = {
+                data:   new Array(),
+                colors: new Array(),
+                labels: new Array(),
+                total:  0,
+            };
+
+            iterateSessions(storage, 0, {
+                onIterationStarted: function(storage) {
+                        for (var i = 0; i < storage.characters.length; ++i)
+                        {
+                            storage.data[i]   = 0;
+                            storage.labels[i] = '';
+                        }
+                    },
+
+                onCharacterStarted: function(storage, character_index) {
+                        storage.colors[character_index] = getColor(storage.characters[character_index]);
+                    },
+
+                onData: function(storage, character_index, timestamp_index, values, previous_values) {
+                        if (values != null)
+                        {
+                            if (values.money !== undefined)
+                                storage.data[character_index] = values.money / 10000;
+                            else
+                                storage.data[character_index] = 0;
+                        }
+                        else if (previous_values != null)
+                        {
+                            if (previous_values.money !== undefined)
+                                storage.data[character_index] = previous_values.money / 10000;
+                            else
+                                storage.data[character_index] = 0;
+                        }
+                        else
+                        {
+                            storage.data[character_index] = 0;
+                        }
+                        
+                        storage.total += storage.data[character_index];
+
+                        storage.labels[character_index] = storage.characters[character_index] + ': ' + moneyAsText(storage.data[character_index]);
+                    },
+                }
+            );
+
+            for (var i = 0; i < storage.data.length; ++i)
+            {
+                var percentage = Math.floor(100.0 * storage.data[i] / storage.total);
+                storage.labels[i] += ' (' + percentage + '%)'
+            }
+
+            $('#graph_fortune_title').text('Total: ' + moneyAsText(storage.total));
+
+            // Create the pie chart
+            var pie = new RGraph.Pie('graph_fortune', storage.data);
+            pie.Set('chart.tooltips', storage.labels);
+            pie.Set('chart.linewidth', 2);
+            pie.Set('chart.colors', storage.colors);
+            pie.Set('chart.strokestyle', '#000000');
+            pie.Draw();
+        }
+
+
         function drawPerCharacterMoney()
         {
             // Prepare the data for the bar chart
@@ -431,16 +502,9 @@
                             storage.data[timestamp_index][character_index] = 0;
                         }
 
-                        var money_po = Math.floor(storage.data[timestamp_index][character_index]);
-                        var money_pa = Math.floor((storage.data[timestamp_index][character_index] * 100) % 100);
-                        var money_pc = Math.floor((storage.data[timestamp_index][character_index] * 10000) % 100);
-
-                        var text_money = storage.characters[character_index] + ' (';
-                        text_money += money_po + ' po '
-                        text_money += money_pa + ' pa '
-                        text_money += money_pc + ' pc'
-                        text_money += ')';
-                        storage.tooltips_stacked[timestamp_index][character_index] = text_money;
+                        storage.tooltips_stacked[timestamp_index][character_index] =
+                                storage.characters[character_index] + ' (' +
+                                moneyAsText(storage.data[timestamp_index][character_index]) + ')';
                     },
                 }
             );
@@ -733,6 +797,20 @@
     </div>
 
     <div>
+        <h2>Fortune</h2>
+        <table>
+            <tr>
+                <td id="graph_fortune_title"></td>
+            </tr>
+            <tr>
+                <td>
+                    <canvas id="graph_fortune" width="400" height="400" style="cursor: default;"></canvas>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div>
         <h2>Money on each character</h2>
         <table>
             <tr>
@@ -798,6 +876,7 @@
         window.onload = function ()
         {
             drawPerCharacterPlayTime();
+            drawFortune();
             drawPerCharacterMoney();
             drawTotalPlayTime();
             drawCharactersPie('graph_characters_pie_all', null);
