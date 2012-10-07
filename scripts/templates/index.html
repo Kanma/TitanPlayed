@@ -132,7 +132,7 @@
 
                 for (var j = offset - 1; j >= 0; --j)
                 {
-                    if (entries[character_names[current_character]].sessions[timestamps[j]] !== undefined)
+                    if (entries[character_names[i]].sessions[timestamps[j]] !== undefined)
                     {
                         last_values[current_character] = entries[character_names[i]].sessions[timestamps[j]];
                         break;
@@ -145,12 +145,8 @@
             callbacks.onIterationStarted(storage);
 
             // Iterate through the sessions
-            current_character = 0;
-            for (var i = 0; i < character_names.length; ++i)
+            for (var current_character = 0; current_character < storage.characters.length; ++current_character)
             {
-                if (characters_to_ignore.indexOf(character_names[i]) !== -1)
-                    continue;
-
                 callbacks.onCharacterStarted(storage, current_character);
 
                 var previous_values = last_values[current_character];
@@ -159,18 +155,16 @@
                 {
                     var timestamp = storage.timestamps[j];
 
-                    if (entries[character_names[i]].sessions[timestamp] !== undefined)
+                    if (entries[storage.characters[current_character]].sessions[timestamp] !== undefined)
                     {
-                        callbacks.onData(storage, current_character, j, entries[character_names[i]].sessions[timestamp], previous_values);
-                        previous_values = entries[character_names[i]].sessions[timestamp];
+                        callbacks.onData(storage, current_character, j, entries[storage.characters[current_character]].sessions[timestamp], previous_values);
+                        previous_values = entries[storage.characters[current_character]].sessions[timestamp];
                     }
                     else
                     {
                         callbacks.onData(storage, current_character, j, null, previous_values);
                     }
                 }
-
-                ++current_character;
             }
         }
 
