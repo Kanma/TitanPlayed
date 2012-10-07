@@ -47,7 +47,7 @@
 
             return DEFAULT_COLOR;
         }
-
+        
 
         function getScaleFactor(value)
         {
@@ -76,58 +76,237 @@
             return row;
         }
 
-        function drawPerCharacterPlayTimeAndMoney()
+
+        //--------------------------------------------------------------------------------
+        // Iterate through all the sessions of each (enabled) characters and invoke
+        // callbacks with the data found in the sessions
+        //
+        // Parameters:
+        //     storage: User-provided map provided to each callback
+        //     limit:   The number of sessions to iterate (always the most recent ones).
+        //              If 'undefined', will iterate through all the sessions
+        //     callbacks: A list of functions to call during the iterations
+        //
+        // The 'storage' object:
+        //     The function will add the following fields to the 'storage' object:
+        //        - timestamps: a list of the timestamps of the sessions
+        //        - characters: a list of the names of the enabled characters
+        //
+        //     The callback functions are free to add any field they need to do their job.
+        //
+        // The callback functions:
+        //     - onIterationStarted(storage):
+        //              Called when the lists of timestamps and character names are ready
+        //     - onCharacterStarted(storage, character_index):
+        //              Called when the iteration over the sessions of a specific
+        //              character begins
+        //     - onData(storage, character_index, timestamp_index, values, previous_values):
+        //              Called for each session of the character, with 'values' being the
+        //              data of this character at the specified timestamp (can be null)
+        //              and 'previous_values' the last known values for this character
+        //              (can be null)
+        //--------------------------------------------------------------------------------
+        function iterateSessions(storage, limit, callbacks)
         {
-            // Prepare the data for the bar chart
-            var data = new Array();
-            var data_money = new Array();
-            var last_money = new Array();
-            var colors = new Array();
-            var labels = new Array();
-            var tooltips_stacked = new Array();
-            var tooltips_stacked_money = new Array();
+            // Parameters handling
+            if (limit === undefined)
+                limit = timestamps.length;
 
-            var offset = Math.max(timestamps.length - 16, 0);
-            var date_start = new Date(timestamps[offset + 1] * 1000);
-            var date_end = new Date(timestamps[timestamps.length-1] * 1000);
+            var offset = Math.max(timestamps.length - limit - 1, 1);
 
-            $('#graph_character_played_title').text(date_start.toLocaleDateString() + ' - ' + date_end.toLocaleDateString());
+            // Store the timestamps of the concerned period
+            storage.timestamps = timestamps.slice(offset);
 
+            // Search the list of enabled characters and their first timestamp before the period
+            var first_timestamps = new Array();
             var current_character = 0;
+            storage.characters = new Array();
             for (var i = 0; i < character_names.length; ++i)
             {
                 if (characters_to_ignore.indexOf(character_names[i]) !== -1)
                     continue;
 
-                colors[current_character] = getColor(character_names[i]);
-                last_money[i] = 0;
+                storage.characters[current_character] = character_names[i];
 
-                var previous_timestamp = null;
-                for (var j = 0; j < timestamps.length - offset; ++j)
+                for (var j = 0; j < timestamps.length - offset + 1; ++j)
                 {
-                    var str_timestamp = Number(timestamps[j + offset]).toString();
-
-                    if ((j > 0) && (i == 0))
+                    if (entries[character_names[i]].sessions[timestamps[j + offset - 1]] !== undefined)
                     {
-                        data[j-1] = new Array();
-                        tooltips_stacked[j-1] = new Array();
-                        data_money[j-1] = new Array();
-                        tooltips_stacked_money[j-1] = new Array();
+                        first_timestamps[current_character] = timestamps[j + offset - 1];
+                        break;
                     }
+                }
 
-                    if (entries[character_names[i]].sessions[str_timestamp] !== undefined)
+                ++current_character;
+            }
+
+            callbacks.onIterationStarted(storage);
+
+            // Iterate through the sessions
+            current_character = 0;
+            for (var i = 0; i < character_names.length; ++i)
+            {
+                if (characters_to_ignore.indexOf(character_names[i]) !== -1)
+                    continue;
+
+                callbacks.onCharacterStarted(storage, current_character);
+
+                var previous_values = entries[character_names[i]].sessions[first_timestamps[current_character]];
+
+                for (var j = 0; j < storage.timestamps.length; ++j)
+                {
+                    var timestamp = storage.timestamps[j];
+
+                    if (timestamp < first_timestamps[current_character])
                     {
-                        if (previous_timestamp !== null)
-                        {
-                            var duration = entries[character_names[i]].sessions[str_timestamp].played - entries[character_names[i]].sessions[previous_timestamp].played;
+                        callbacks.onData(storage, current_character, j, null, null);
+                    }
+                    else if (timestamp == first_timestamps[current_character])
+                    {
+                        previous_values = entries[character_names[i]].sessions[timestamp];
+                        callbacks.onData(storage, current_character, j, previous_values, null);
+                    }
+                    else if (entries[character_names[i]].sessions[timestamp] !== undefined)
+                    {
+                        callbacks.onData(storage, current_character, j, entries[character_names[i]].sessions[timestamp], previous_values);
+                        previous_values = entries[character_names[i]].sessions[timestamp];
+                    }
+                    else
+                    {
+                        callbacks.onData(storage, current_character, j, null, previous_values);
+                    }
+                }
 
-                            data[j-1][current_character] = duration / 3600.0;
+                ++current_character;
+            }
+        }
+
+
+        function getDateLabels(timestamps)
+        {
+            var current_year = null;
+            var current_month = null;
+            var labels = new Array();
+
+            for (var j = 0; j < timestamps.length; ++j)
+            {
+                var date = new Date(timestamps[j] * 1000);
+
+                labels[j] = '';
+
+                if (timestamps.length < 31)
+                    labels[j] = date.getUTCDate();
+
+                if (current_month != date.getUTCMonth())
+                {
+                    labels[j] = labels[j] + '/' + (date.getUTCMonth() + 1);
+                    current_month = date.getUTCMonth();
+                }
+
+                if (current_year != date.getUTCFullYear())
+                {
+                    labels[j] = labels[j] + '/' + date.getUTCFullYear();
+                    current_year = date.getUTCFullYear();
+                }
+            }
+            
+            return labels;
+        }
+
+
+        function getLimitsOfCumulatedRows(values, default_max_value, default_min_value)
+        {
+            var max_value = undefined;
+            var min_value = undefined;
+            var sum = 0;
+            
+            if (default_max_value !== undefined)
+                max_value = default_max_value;
+
+            if (default_min_value !== undefined)
+                min_value = default_min_value;
+            
+            for (var j = 0; j < values.length; ++j)
+            {
+                if (values[j] === null)
+                    continue;
+                
+                var total = 0;
+
+                if (values[j] instanceof Array)
+                    total = getLimitsOfCumulatedRows(values[j], default_max_value, default_min_value).sum;
+                else
+                    total = values[j];
+
+                if (max_value !== undefined)
+                    max_value = Math.max(max_value, total);
+                else
+                    max_value = total;
+
+                if (min_value !== undefined)
+                    min_value = Math.min(min_value, total);
+                else
+                    min_value = total;
+
+                sum += total;
+            }
+
+            return { max: max_value, min: min_value, sum: sum };
+        }
+        
+        
+        function flatten(values)
+        {
+            var result = new Array();
+            for (var j = 0; j < values.length; ++j)
+            {
+                for (var i = 0; i < values[j].length; ++i)
+                    result[j * values[j].length + i] = values[j][i];
+            }
+            
+            return result;
+        }
+
+
+        function drawPerCharacterPlayTime()
+        {
+            // Prepare the data for the bar chart
+            var storage = {
+                data:             new Array(),
+                colors:           new Array(),
+                tooltips_stacked: new Array(),
+            };
+
+            iterateSessions(storage, 15, {
+                onIterationStarted: function(storage) {
+                        for (var i = 0; i < storage.timestamps.length; ++i)
+                        {
+                            storage.data[i]             = new Array();
+                            storage.tooltips_stacked[i] = new Array();
+                        }
+                    },
+
+                onCharacterStarted: function(storage, character_index) {
+                        storage.colors[character_index] = getColor(storage.characters[character_index]);
+                    },
+
+                onData: function(storage, character_index, timestamp_index, values, previous_values) {
+                        if ((values === null) || (previous_values === null))
+                        {
+                            storage.data[timestamp_index][character_index] = 0;
+                            storage.tooltips_stacked[timestamp_index][character_index] = '';
+                        }
+                        else
+                        {
+                            var duration = values.played - previous_values.played;
+
+                            storage.data[timestamp_index][character_index] = duration / 3600.0;
 
                             var seconds = duration % 60;
                             var minutes = ((duration - seconds) / 60) % 60;
                             var hours = (duration - minutes * 60 - seconds) / 3600;
 
-                            var text = character_names[i] + ' (';
+                            var text = storage.characters[character_index] + ' (';
 
                             if (hours < 10)
                                 text += '0';
@@ -141,120 +320,34 @@
                                 text += '0';
                             text += seconds + ')';
 
-                            tooltips_stacked[j-1][current_character] = text;
-
-                            previous_timestamp = str_timestamp
+                            storage.tooltips_stacked[timestamp_index][character_index] = text;
                         }
-                        else
-                        {
-                            previous_timestamp = str_timestamp;
-                            if (j > 0)
-                            {
-                                data[j-1][current_character] = 0;
-                                tooltips_stacked[j-1][current_character] = '';
-                            }
-                        }
-
-                        if (j > 0)
-                        {
-                            if (entries[character_names[i]].sessions[str_timestamp].money !== undefined)
-                                last_money[i] = entries[character_names[i]].sessions[str_timestamp].money / 10000;
-
-                            data_money[j-1][current_character] = last_money[i];
-                        }
-                    }
-                    else if (j > 0)
-                    {
-                        data[j-1][current_character] = 0;
-                        tooltips_stacked[j-1][current_character] = '';
-                        data_money[j-1][current_character] = last_money[i];
-                    }
-
-                    if (j > 0)
-                    {
-                        var money_po = Math.floor(last_money[i]);
-                        var money_pa = Math.floor((last_money[i] * 100) % 100);
-                        var money_pc = Math.floor((last_money[i] * 10000) % 100);
-
-                        var text_money = character_names[i] + ' (';
-                        text_money += money_po + ' po '
-                        text_money += money_pa + ' pa '
-                        text_money += money_pc + ' pc'
-                        text_money += ')';
-                        tooltips_stacked_money[j-1][current_character] = text_money;
-                    }
+                    },
                 }
+            );
 
-                ++current_character;
-            }
+            // Display the period covered by the graph
+            var date_start = new Date(storage.timestamps[0] * 1000);
+            var date_end = new Date(storage.timestamps[storage.timestamps.length - 1] * 1000);
 
-            var tooltips = new Array();
-            for (var j = 0; j < tooltips_stacked.length; ++j)
-            {
-                for (var i = 0; i < tooltips_stacked[j].length; ++i)
-                    tooltips[j * tooltips_stacked[j].length + i] = tooltips_stacked[j][i];
-            }
+            $('#graph_character_played_title').text(date_start.toLocaleDateString() + ' - ' + date_end.toLocaleDateString());
 
-            var tooltips_money = new Array();
-            for (var j = 0; j < tooltips_stacked_money.length; ++j)
-            {
-                for (var i = 0; i < tooltips_stacked_money[j].length; ++i)
-                    tooltips_money[j * tooltips_stacked_money[j].length + i] = tooltips_stacked_money[j][i];
-            }
-
-
-            var current_year = null;
-            var current_month = null;
-            var max_value = 1;
-            var max_value_money = 1;
-
-            for (var j = 1; j < timestamps.length - offset; ++j)
-            {
-                var date = new Date(timestamps[j + offset] * 1000);
-
-                labels[j-1] = date.getUTCDate();
-
-                if (current_month != date.getUTCMonth())
-                {
-                    labels[j-1] = labels[j-1] + '/' + (date.getUTCMonth() + 1);
-                    current_month = date.getUTCMonth();
-                }
-
-                if (current_year != date.getUTCFullYear())
-                {
-                    labels[j-1] = labels[j-1] + '/' + date.getUTCFullYear();
-                    current_year = date.getUTCFullYear();
-                }
-
-                var total = 0;
-                for (var i = 0; i < data[j-1].length; ++i)
-                    total += data[j-1][i];
-                max_value = Math.max(max_value, total);
-
-                var total_money = 0;
-                for (var i = 0; i < data_money[j-1].length; ++i)
-                    total_money += data_money[j-1][i];
-                max_value_money = Math.max(max_value_money, total_money);
-            }
-
-            max_value = Math.ceil(max_value);
-
-            var factor = getScaleFactor(max_value_money);
-            max_value_money = Math.ceil(max_value_money / factor) * factor;
-
+            // Compute the maximum value of the y-axis and the labels
+            var labels = getDateLabels(storage.timestamps);
+            var max_value = Math.ceil(getLimitsOfCumulatedRows(storage.data, 1).max);
 
             // Create the bar chart
             var gutterLeft = 50;
 
-            var bar = new RGraph.Bar('graph_character_played', data);
+            var bar = new RGraph.Bar('graph_character_played', storage.data);
             bar.Set('chart.labels', labels);
             bar.Set('chart.labels.colors', ['black']);
-            bar.Set('chart.tooltips', tooltips);
+            bar.Set('chart.tooltips', flatten(storage.tooltips_stacked));
             bar.Set('chart.gutter.left', gutterLeft);
             bar.Set('chart.background.barcolor1', 'white');
             bar.Set('chart.background.barcolor2', 'white');
             bar.Set('chart.background.grid', true);
-            bar.Set('chart.colors', colors);
+            bar.Set('chart.colors', storage.colors);
             bar.Set('chart.grouping', 'stacked');
             bar.Set('chart.hmargin', 10);
             bar.Set('chart.strokestyle', '#000000');
@@ -284,34 +377,106 @@
 
             bar.Draw();
 
-            var bar_money = new RGraph.Bar('graph_character_money', data_money);
+            // Fill the legend panel
+            var legend = $('#legend');
+            for (var i = 0; i < storage.characters.length; ++i)
+            {
+                if (characters_to_ignore.indexOf(storage.characters[i]) !== -1)
+                    continue;
+
+                legend.append(createRowLegend(storage.characters[i]));
+            }
+        }
+
+
+        function drawPerCharacterMoney()
+        {
+            // Prepare the data for the bar chart
+            var storage = {
+                data:             new Array(),
+                colors:           new Array(),
+                tooltips_stacked: new Array(),
+            };
+
+            iterateSessions(storage, 15, {
+                onIterationStarted: function(storage) {
+                        for (var i = 0; i < storage.timestamps.length; ++i)
+                        {
+                            storage.data[i]             = new Array();
+                            storage.tooltips_stacked[i] = new Array();
+                        }
+                    },
+
+                onCharacterStarted: function(storage, character_index) {
+                        storage.colors[character_index] = getColor(storage.characters[character_index]);
+                    },
+
+                onData: function(storage, character_index, timestamp_index, values, previous_values) {
+                        if (values != null)
+                        {
+                            if (values.money !== undefined)
+                                storage.data[timestamp_index][character_index] = values.money / 10000;
+                            else
+                                storage.data[timestamp_index][character_index] = 0;
+                        }
+                        else if (previous_values != null)
+                        {
+                            if (previous_values.money !== undefined)
+                                storage.data[timestamp_index][character_index] = previous_values.money / 10000;
+                            else
+                                storage.data[timestamp_index][character_index] = 0;
+                        }
+                        else
+                        {
+                            storage.data[timestamp_index][character_index] = 0;
+                        }
+
+                        var money_po = Math.floor(storage.data[timestamp_index][character_index]);
+                        var money_pa = Math.floor((storage.data[timestamp_index][character_index] * 100) % 100);
+                        var money_pc = Math.floor((storage.data[timestamp_index][character_index] * 10000) % 100);
+
+                        var text_money = storage.characters[character_index] + ' (';
+                        text_money += money_po + ' po '
+                        text_money += money_pa + ' pa '
+                        text_money += money_pc + ' pc'
+                        text_money += ')';
+                        storage.tooltips_stacked[timestamp_index][character_index] = text_money;
+                    },
+                }
+            );
+
+            // Compute the maximum value of the y-axis and the labels
+            var labels = getDateLabels(storage.timestamps);
+            var max_value = Math.ceil(getLimitsOfCumulatedRows(storage.data, 1).max);
+            var factor = getScaleFactor(max_value);
+            max_value = Math.ceil(max_value / factor) * factor;
+
+            // Create the graph
+            var bar_money = new RGraph.Bar('graph_character_money', storage.data);
             bar_money.Set('chart.labels', labels);
             bar_money.Set('chart.labels.colors', ['black']);
-            bar_money.Set('chart.tooltips', tooltips_money);
+            bar_money.Set('chart.tooltips', flatten(storage.tooltips_stacked));
             bar_money.Set('chart.gutter.left', 80);
             bar_money.Set('chart.background.barcolor1', 'white');
             bar_money.Set('chart.background.barcolor2', 'white');
             bar_money.Set('chart.background.grid', true);
-            bar_money.Set('chart.colors', colors);
+            bar_money.Set('chart.colors', storage.colors);
             bar_money.Set('chart.grouping', 'stacked');
             bar_money.Set('chart.hmargin', 10);
             bar_money.Set('chart.strokestyle', '#000000');
-            bar_money.Set('chart.ymax', max_value_money);
+            bar_money.Set('chart.ymax', max_value);
             bar_money.Set('chart.variant', '3d');
             bar_money.Set('chart.units.post', ' po');
             bar_money.Draw();
 
-
             // Fill the legend panel
-            var legend = $('#legend');
-            var legend_money = $('#legend_money');
-            for (var i = 0; i < character_names.length; ++i)
+            var legend = $('#legend_money');
+            for (var i = 0; i < storage.characters.length; ++i)
             {
-                if (characters_to_ignore.indexOf(character_names[i]) !== -1)
+                if (characters_to_ignore.indexOf(storage.characters[i]) !== -1)
                     continue;
 
-                legend.append(createRowLegend(character_names[i]));
-                legend_money.append(createRowLegend(character_names[i]));
+                legend.append(createRowLegend(storage.characters[i]));
             }
         }
 
@@ -319,123 +484,69 @@
         function drawTotalPlayTime()
         {
             // Prepare the data for the line charts
-            var data_time = new Array();
-            var data_money = new Array();
-            var labels = new Array();
-            var last_money = new Array();
+            var storage = {
+                data_time:  new Array(),
+                data_money: new Array(),
+                last_money: null,
+            };
 
-            for (var i = 0; i < character_names.length; ++i)
-            {
-                if (characters_to_ignore.indexOf(character_names[i]) !== -1)
-                    continue;
-
-                last_money[i] = 0;
-
-                var previous_timestamp = null;
-                for (var j = 0; j < timestamps.length; ++j)
-                {
-                    var str_timestamp = Number(timestamps[j]).toString();
-
-                    if ((j > 0) && (i == 0))
-                    {
-                        data_time[j-1] = 0;
-                        data_money[j-1] = 0;
-                    }
-
-                    if (entries[character_names[i]].sessions[str_timestamp] !== undefined)
-                    {
-                        if (previous_timestamp !== null)
+            iterateSessions(storage, undefined, {
+                onIterationStarted: function(storage) {
+                        for (var i = 0; i < storage.timestamps.length; ++i)
                         {
-                            var duration = entries[character_names[i]].sessions[str_timestamp].played - entries[character_names[i]].sessions[previous_timestamp].played;
-                            data_time[j-1] += duration / 3600.0;
-
-                            if (entries[character_names[i]].sessions[str_timestamp].money !== undefined)
-                                last_money[i] = entries[character_names[i]].sessions[str_timestamp].money;
-
-                            data_money[j-1] += last_money[i];
-
-                            previous_timestamp = str_timestamp;
+                            storage.data_time[i]  = 0;
+                            storage.data_money[i] = null;
                         }
-                        else
+                    },
+
+                onCharacterStarted: function(storage, character_index) {
+                        storage.last_money = null;
+                    },
+
+                onData: function(storage, character_index, timestamp_index, values, previous_values) {
+                        if (values !== null)
                         {
-                            previous_timestamp = str_timestamp;
+                            if (previous_values !== null)
+                            {
+                                var duration = values.played - previous_values.played;
+                                storage.data_time[timestamp_index] += duration / 3600.0;
+                            }
+
+                            if (values.money !== undefined)
+                                storage.last_money = values.money / 10000;
                         }
-                    }
-                    else if (previous_timestamp !== null)
-                    {
-                        data_money[j-1] += last_money[i];
-                    }
+
+                        if ((storage.last_money !== null) && (storage.last_money != 0))
+                        {
+                            if (storage.data_money[timestamp_index] !== null)
+                                storage.data_money[timestamp_index] += storage.last_money;
+                            else
+                                storage.data_money[timestamp_index] = storage.last_money;
+                        }
+                    },
+                }
+            );
+
+            // Compute the maximum and minimum values of the y-axis and the labels
+            var labels = getDateLabels(storage.timestamps);
+
+            var limits_time = getLimitsOfCumulatedRows(storage.data_time, 1);
+            var limits_money = getLimitsOfCumulatedRows(storage.data_money, 1);
+
+            var max_value_time = Math.ceil(limits_time.max);
+
+            if (limits_money.max == limits_money.min) {
+                limits_money.max = limits_money.max + 1000;
+                limits_money.min = limits_money.min - 1000;
+                if (limits_money.min < 0) {
+                    limits_money.min = 0;
                 }
             }
 
-            var current_year = null;
-            var current_month = null;
-            var max_value_time = 1;
-            var max_value_money = 1;
-            var min_value_money = 0;
-            var money_started = false;
+            var factor = getScaleFactor(limits_money.max - limits_money.min);
 
-            for (var j = 1; j < timestamps.length; ++j)
-            {
-                var date = new Date(timestamps[j] * 1000);
-
-                labels[j-1] = '';
-
-                if (timestamps.length < 31)
-                    labels[j-1] = date.getUTCDate();
-
-                if (current_month != date.getUTCMonth())
-                {
-                    if (timestamps.length < 31)
-                        labels[j-1] += '/';
-
-                    labels[j-1] += date.getUTCMonth() + 1;
-                    current_month = date.getUTCMonth();
-                }
-
-                if (current_year != date.getUTCFullYear())
-                {
-                    labels[j-1] += '/' + date.getUTCFullYear();
-                    current_year = date.getUTCFullYear();
-                }
-
-                if (!money_started && (data_money[j-1] == 0))
-                {
-                    data_money[j-1] = null;
-                }
-                else
-                {
-                    data_money[j-1] = data_money[j-1] / (100 * 100);
-                    max_value_money = Math.max(max_value_money, data_money[j-1]);
-
-                    if (money_started)
-                    {
-                        min_value_money = Math.min(min_value_money, data_money[j-1]);
-                    }
-                    else
-                    {
-                        min_value_money = data_money[j-1];
-                        money_started = true;
-                    }
-                }
-
-                max_value_time = Math.max(max_value_time, data_time[j-1]);
-            }
-
-            max_value_time = Math.ceil(max_value_time);
-
-            if (max_value_money == min_value_money) {
-                max_value_money = max_value_money + 1000;
-                min_value_money = min_value_money - 1000;
-                if (min_value_money < 0) {
-                    min_value_money = 0;
-                }
-            }
-
-            var factor = getScaleFactor(max_value_money - min_value_money);
-
-            max_value_money = Math.ceil(max_value_money / factor) * factor;
-            min_value_money = Math.floor(min_value_money / factor) * factor;
+            var max_value_money = Math.ceil(limits_money.max / factor) * factor;
+            var min_value_money = Math.floor(limits_money.min / factor) * factor;
 
 
             // Create the line charts
@@ -443,7 +554,7 @@
             var gutterRight = 100;
             var gutterTop   = 25;
 
-            var line1 = new RGraph.Line('graph_day_played', data_time);
+            var line1 = new RGraph.Line('graph_day_played', storage.data_time);
             line1.Set('chart.labels', labels);
             line1.Set('chart.gutter.right', gutterRight);
             line1.Set('chart.gutter.left', gutterLeft);
@@ -466,7 +577,7 @@
             line1.Set('chart.ylabels', false);
             line1.Draw();
 
-            var line2 = new RGraph.Line('graph_day_played', data_money);
+            var line2 = new RGraph.Line('graph_day_played', storage.data_money);
             line2.Set('chart.gutter.left', 45);
             line2.Set('chart.gutter.right', gutterRight);
             line2.Set('chart.gutter.left', gutterLeft);
@@ -686,7 +797,8 @@
     <script type="text/javascript">
         window.onload = function ()
         {
-            drawPerCharacterPlayTimeAndMoney();
+            drawPerCharacterPlayTime();
+            drawPerCharacterMoney();
             drawTotalPlayTime();
             drawCharactersPie('graph_characters_pie_all', null);
             drawCharactersPie('graph_characters_pie_2_months', 60);
