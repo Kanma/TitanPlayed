@@ -11,7 +11,7 @@ h2
 }
 
 
-td#graph_character_played_title
+td.period
 {
     display: block;
     font-size: 16px;

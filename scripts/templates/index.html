@@ -12,6 +12,8 @@
     <script src="./js/rgraph/RGraph.bar.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.line.js" type="text/javascript"></script>
     <script src="./js/rgraph/RGraph.pie.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.scatter.js" type="text/javascript"></script>
+    <script src="./js/rgraph/RGraph.drawing.rect.js" type="text/javascript"></script>
 
     <script type="text/javascript">
         // Colors from http://www.wowwiki.com/Class_colors
@@ -47,7 +49,7 @@
 
             return DEFAULT_COLOR;
         }
-        
+
 
         function getScaleFactor(value)
         {
@@ -196,7 +198,7 @@
                     current_year = date.getUTCFullYear();
                 }
             }
-            
+
             return labels;
         }
 
@@ -206,18 +208,18 @@
             var max_value = undefined;
             var min_value = undefined;
             var sum = 0;
-            
+
             if (default_max_value !== undefined)
                 max_value = default_max_value;
 
             if (default_min_value !== undefined)
                 min_value = default_min_value;
-            
+
             for (var j = 0; j < values.length; ++j)
             {
                 if (values[j] === null)
                     continue;
-                
+
                 var total = 0;
 
                 if (values[j] instanceof Array)
@@ -240,8 +242,8 @@
 
             return { max: max_value, min: min_value, sum: sum };
         }
-        
-        
+
+
         function flatten(values)
         {
             var result = new Array();
@@ -250,18 +252,19 @@
                 for (var i = 0; i < values[j].length; ++i)
                     result[j * values[j].length + i] = values[j][i];
             }
-            
+
             return result;
         }
-        
-        
-        function moneyAsText(gold)
+
+
+        function moneyAsHtml(gold)
         {
             var money_po = Math.floor(gold);
             var money_pa = Math.floor((gold * 100) % 100);
             var money_pc = Math.floor((gold * 10000) % 100);
 
-            return '' + money_po + ' po ' + money_pa + ' pa ' + money_pc + ' pc';
+            return '<span style="color: #FF9933">' + money_po + ' po</span> <span style="color: #777777">' +
+                   money_pa + ' pa</span> <span style="color: #CC6600">' + money_pc + ' pc</span>';
         }
 
 
@@ -351,7 +354,8 @@
             bar.Set('chart.ymax', max_value);
             bar.Set('chart.variant', '3d');
             bar.Set('chart.background.grid.autofit.numhlines', max_value);
-            bar.Set('chart.noaxes', true);
+            bar.Set('chart.background.grid.autofit.numvlines', storage.timestamps.length );
+            bar.Set('chart.noyaxis', true);
             bar.Set('chart.ylabels', false);
 
             // Draws the extra axe. It's run whenever the bar object is drawn
@@ -428,10 +432,10 @@
                         {
                             storage.data[character_index] = 0;
                         }
-                        
+
                         storage.total += storage.data[character_index];
 
-                        storage.labels[character_index] = storage.characters[character_index] + ': ' + moneyAsText(storage.data[character_index]);
+                        storage.labels[character_index] = storage.characters[character_index] + ': ' + moneyAsHtml(storage.data[character_index]);
                     },
                 }
             );
@@ -442,7 +446,7 @@
                 storage.labels[i] += ' (' + percentage + '%)'
             }
 
-            $('#graph_fortune_title').text('Total: ' + moneyAsText(storage.total));
+            $('#graph_fortune_title').html('Total: ' + moneyAsHtml(storage.total));
 
             // Create the pie chart
             var pie = new RGraph.Pie('graph_fortune', storage.data);
@@ -451,6 +455,171 @@
             pie.Set('chart.colors', storage.colors);
             pie.Set('chart.strokestyle', '#000000');
             pie.Draw();
+        }
+
+
+        function drawPerCharacterMoneyActivity()
+        {
+            // Prepare the data for the bar chart
+            var storage = {
+                data:     new Array(),
+                incomes:  new Array(),
+                expenses: new Array(),
+                ok:       false,
+            };
+
+            iterateSessions(storage, 15, {
+                onIterationStarted: function(storage) {
+                        for (var i = 0; i < storage.timestamps.length; ++i)
+                        {
+                            storage.incomes[i]  = 0;
+                            storage.expenses[i] = 0;
+                        }
+                    },
+
+                onCharacterStarted: function(storage, character_index) {
+                        storage.ok = false;
+                    },
+
+                onData: function(storage, character_index, timestamp_index, values, previous_values) {
+                        if ((values != null) && (values.money !== undefined) &&
+                            (previous_values != null) && (previous_values.money !== undefined))
+                        {
+                            if ((!storage.ok) && ((values.money == 0) || (previous_values.money == 0)))
+                                return;
+
+                            storage.ok = true;
+
+                            var diff = (values.money - previous_values.money) / 10000;
+                            if (diff == 0)
+                                return;
+
+                            var color = getColor(storage.characters[character_index]);
+
+                            var box;
+                            if (diff > 0)
+                            {
+                                box = [storage.incomes[timestamp_index],
+                                       storage.incomes[timestamp_index],
+                                       storage.incomes[timestamp_index] + diff / 2,
+                                       storage.incomes[timestamp_index] + diff,
+                                       storage.incomes[timestamp_index] + diff,
+                                       color, color, 1.6
+                                ];
+
+                                storage.incomes[timestamp_index] += diff;
+                            }
+                            else
+                            {
+                                box = [storage.expenses[timestamp_index] + diff,
+                                       storage.expenses[timestamp_index] + diff,
+                                       storage.expenses[timestamp_index] + diff / 2,
+                                       storage.expenses[timestamp_index],
+                                       storage.expenses[timestamp_index],
+                                       color, color, 1.6
+                                ];
+
+                                storage.expenses[timestamp_index] += diff;
+                            }
+
+                            storage.data[storage.data.length] = [
+                                timestamp_index * 2 + 1,
+                                box,
+                                getColor(storage.characters[character_index]),
+                                storage.characters[character_index] + ': -' + moneyAsHtml(Math.abs(diff)),
+                            ];
+                        }
+                    },
+                }
+            );
+
+            // Display the period covered by the graph
+            var date_start = new Date(storage.timestamps[0] * 1000);
+            var date_end = new Date(storage.timestamps[storage.timestamps.length - 1] * 1000);
+
+            $('#graph_character_money_activity_title').text(date_start.toLocaleDateString() + ' - ' + date_end.toLocaleDateString());
+
+            // Compute the maximum value of the y-axis and the labels
+            var labels = getDateLabels(storage.timestamps);
+            var max_value = Math.ceil(getLimitsOfCumulatedRows(storage.incomes, 1).max);
+            var min_value = Math.floor(getLimitsOfCumulatedRows(storage.expenses, 1).min);
+            var factor = getScaleFactor(max_value - min_value);
+            max_value = Math.ceil(max_value / factor) * factor;
+            min_value = Math.floor(min_value / factor) * factor;
+
+            // Create the graph
+            var gutterLeft = 80;
+            var scatter = new RGraph.Scatter('graph_character_money_activity', storage.data);
+            scatter.Set('chart.labels', labels);
+            scatter.Set('chart.gutter.left', gutterLeft);
+            scatter.Set('chart.background.barcolor1', 'white');
+            scatter.Set('chart.background.barcolor2', 'white');
+            scatter.Set('chart.background.grid', true);
+            scatter.Set('chart.background.grid.autofit.numhlines', (max_value - min_value) / factor);
+            scatter.Set('chart.background.grid.autofit.numvlines', storage.timestamps.length);
+            scatter.Set('chart.hmargin', 10);
+            scatter.Set('chart.strokestyle', '#000000');
+            scatter.Set('chart.ymax', max_value);
+            scatter.Set('chart.ymin', min_value);
+            scatter.Set('chart.xmax', storage.timestamps.length * 2);
+            scatter.Set('chart.noyaxis', true);
+            scatter.Set('chart.ylabels', false);
+            scatter.Set('chart.tickmarks', 'circle');
+
+            // Draws the extra axe. It's run whenever the scatter object is drawn
+            RGraph.AddCustomEventListener(scatter, 'ondraw', function ()
+                {
+                    RGraph.DrawAxes(scatter, {
+                                          'axis.x': gutterLeft,
+                                          'axis.color': 'black',
+                                          'axis.text.color': 'black',
+                                          'axis.max': max_value,
+                                          'axis.numlabels': (max_value - min_value) / factor,
+                                          'axis.numticks': ((max_value - min_value) / factor) * 2,
+                                          'axis.min': min_value,
+                                          'axis.align': 'left',
+                                          'axis.units.post': ' po',
+                                          'axis.scale.decimals': 0,
+                                         });
+                }
+            );
+
+            scatter.Draw();
+
+            for (var i = 0; i < storage.timestamps.length; ++i)
+            {
+                var x = scatter.getXCoord(i * 2 + 0.2);
+                var x2 = scatter.getXCoord((i + 1) * 2 - 0.2);
+                var y0 = scatter.getYCoord(0);
+
+                if (storage.incomes[i] > 0)
+                {
+                    var y = scatter.getYCoord(storage.incomes[i]);
+
+                    var rect = new RGraph.Drawing.Rect('graph_character_money_activity', x, y, x2 - x, y0 - y);
+                    rect.Set('chart.strokestyle', 'black');
+                    rect.Set('chart.fillstyle', 'transparent');
+                    rect.Set('chart.shadow', true);
+                    rect.Draw();
+                }
+
+                if (storage.expenses[i] < 0)
+                {
+                    var y = scatter.getYCoord(storage.expenses[i]);
+
+                    var rect = new RGraph.Drawing.Rect('graph_character_money_activity', x, y0, x2 - x, y - y0);
+                    rect.Set('chart.strokestyle', 'black');
+                    rect.Set('chart.fillstyle', 'transparent');
+                    rect.Set('chart.shadow', true);
+                    rect.Draw();
+                }
+            }
+
+            var rect = new RGraph.Drawing.Rect('graph_character_money_activity', scatter.getXCoord(0), y0, scatter.getXCoord(storage.timestamps.length * 2) - scatter.getXCoord(0), 0);
+            rect.Set('chart.strokestyle', 'black');
+            rect.Set('chart.fillstyle', 'transparent');
+            rect.Set('chart.shadow', false);
+            rect.Draw();
         }
 
 
@@ -498,7 +667,7 @@
 
                         storage.tooltips_stacked[timestamp_index][character_index] =
                                 storage.characters[character_index] + ' (' +
-                                moneyAsText(storage.data[timestamp_index][character_index]) + ')';
+                                moneyAsHtml(storage.data[timestamp_index][character_index]) + ')';
                     },
                 }
             );
@@ -525,6 +694,7 @@
             bar_money.Set('chart.ymax', max_value);
             bar_money.Set('chart.variant', '3d');
             bar_money.Set('chart.units.post', ' po');
+            bar_money.Set('chart.background.grid.autofit.numvlines', storage.timestamps.length );
             bar_money.Draw();
 
             // Fill the legend panel
@@ -631,7 +801,7 @@
             line1.Set('chart.hmargin', 10);
             line1.Set('chart.units.post', 'h');
             line1.Set('chart.ymax', max_value_time);
-            line1.Set('chart.noaxes', true);
+            line1.Set('chart.noyaxis', true);
             line1.Set('chart.ylabels', false);
             line1.Draw();
 
@@ -777,7 +947,7 @@
         <h2>Time played on each character</h2>
         <table>
             <tr>
-                <td colspan="2" id="graph_character_played_title"></td>
+                <td colspan="2" id="graph_character_played_title" class="period"></td>
             </tr>
             <tr>
                 <td>
@@ -794,7 +964,7 @@
         <h2>Fortune</h2>
         <table>
             <tr>
-                <td id="graph_fortune_title"></td>
+                <td id="graph_fortune_title" class="period"></td>
             </tr>
             <tr>
                 <td>
@@ -805,17 +975,14 @@
     </div>
 
     <div>
-        <h2>Money on each character</h2>
+        <h2>Money activity</h2>
         <table>
             <tr>
-                <td colspan="2" id="graph_character_money_title"></td>
+                <td id="graph_character_money_activity_title" class="period"></td>
             </tr>
             <tr>
                 <td>
-                    <canvas id="graph_character_money" width="1000" height="600" style="cursor: default;"></canvas>
-                </td>
-                <td>
-                    <table id="legend_money"></table>
+                    <canvas id="graph_character_money_activity" width="1000" height="600" style="cursor: default;"></canvas>
                 </td>
             </tr>
         </table>
@@ -871,7 +1038,7 @@
         {
             drawPerCharacterPlayTime();
             drawFortune();
-            drawPerCharacterMoney();
+            drawPerCharacterMoneyActivity();
             drawTotalPlayTime();
             drawCharactersPie('graph_characters_pie_all', null);
             drawCharactersPie('graph_characters_pie_2_months', 60);
