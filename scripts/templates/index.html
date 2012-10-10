@@ -523,11 +523,16 @@
                                 storage.expenses[timestamp_index] += diff;
                             }
 
+                            var tooltip = storage.characters[character_index] + ': ';
+                            if (diff < 0)
+                                tooltip += '-';
+                            tooltip += moneyAsHtml(Math.abs(diff));
+
                             storage.data[storage.data.length] = [
                                 timestamp_index * 2 + 1,
                                 box,
                                 getColor(storage.characters[character_index]),
-                                storage.characters[character_index] + ': -' + moneyAsHtml(Math.abs(diff)),
+                                tooltip,
                             ];
                         }
                     },
@@ -600,7 +605,6 @@
                     var rect = new RGraph.Drawing.Rect('graph_character_money_activity', x, y, x2 - x, y0 - y);
                     rect.Set('chart.strokestyle', 'black');
                     rect.Set('chart.fillstyle', 'transparent');
-                    rect.Set('chart.shadow', true);
                     rect.Draw();
                 }
 
@@ -611,7 +615,6 @@
                     var rect = new RGraph.Drawing.Rect('graph_character_money_activity', x, y0, x2 - x, y - y0);
                     rect.Set('chart.strokestyle', 'black');
                     rect.Set('chart.fillstyle', 'transparent');
-                    rect.Set('chart.shadow', true);
                     rect.Draw();
                 }
             }
@@ -619,94 +622,7 @@
             var rect = new RGraph.Drawing.Rect('graph_character_money_activity', scatter.getXCoord(0), y0, scatter.getXCoord(storage.timestamps.length * 2) - scatter.getXCoord(0), 0);
             rect.Set('chart.strokestyle', 'black');
             rect.Set('chart.fillstyle', 'transparent');
-            rect.Set('chart.shadow', false);
             rect.Draw();
-        }
-
-
-        function drawPerCharacterMoney()
-        {
-            // Prepare the data for the bar chart
-            var storage = {
-                data:             new Array(),
-                colors:           new Array(),
-                tooltips_stacked: new Array(),
-            };
-
-            iterateSessions(storage, 15, {
-                onIterationStarted: function(storage) {
-                        for (var i = 0; i < storage.timestamps.length; ++i)
-                        {
-                            storage.data[i]             = new Array();
-                            storage.tooltips_stacked[i] = new Array();
-                        }
-                    },
-
-                onCharacterStarted: function(storage, character_index) {
-                        storage.colors[character_index] = getColor(storage.characters[character_index]);
-                    },
-
-                onData: function(storage, character_index, timestamp_index, values, previous_values) {
-                        if (values != null)
-                        {
-                            if (values.money !== undefined)
-                                storage.data[timestamp_index][character_index] = values.money / 10000;
-                            else
-                                storage.data[timestamp_index][character_index] = 0;
-                        }
-                        else if (previous_values != null)
-                        {
-                            if (previous_values.money !== undefined)
-                                storage.data[timestamp_index][character_index] = previous_values.money / 10000;
-                            else
-                                storage.data[timestamp_index][character_index] = 0;
-                        }
-                        else
-                        {
-                            storage.data[timestamp_index][character_index] = 0;
-                        }
-
-                        storage.tooltips_stacked[timestamp_index][character_index] =
-                                storage.characters[character_index] + ' (' +
-                                moneyAsHtml(storage.data[timestamp_index][character_index]) + ')';
-                    },
-                }
-            );
-
-            // Compute the maximum value of the y-axis and the labels
-            var labels = getDateLabels(storage.timestamps);
-            var max_value = Math.ceil(getLimitsOfCumulatedRows(storage.data, 1).max);
-            var factor = getScaleFactor(max_value);
-            max_value = Math.ceil(max_value / factor) * factor;
-
-            // Create the graph
-            var bar_money = new RGraph.Bar('graph_character_money', storage.data);
-            bar_money.Set('chart.labels', labels);
-            bar_money.Set('chart.labels.colors', ['black']);
-            bar_money.Set('chart.tooltips', flatten(storage.tooltips_stacked));
-            bar_money.Set('chart.gutter.left', 80);
-            bar_money.Set('chart.background.barcolor1', 'white');
-            bar_money.Set('chart.background.barcolor2', 'white');
-            bar_money.Set('chart.background.grid', true);
-            bar_money.Set('chart.colors', storage.colors);
-            bar_money.Set('chart.grouping', 'stacked');
-            bar_money.Set('chart.hmargin', 10);
-            bar_money.Set('chart.strokestyle', '#000000');
-            bar_money.Set('chart.ymax', max_value);
-            bar_money.Set('chart.variant', '3d');
-            bar_money.Set('chart.units.post', ' po');
-            bar_money.Set('chart.background.grid.autofit.numvlines', storage.timestamps.length );
-            bar_money.Draw();
-
-            // Fill the legend panel
-            var legend = $('#legend_money');
-            for (var i = 0; i < storage.characters.length; ++i)
-            {
-                if (characters_to_ignore.indexOf(storage.characters[i]) !== -1)
-                    continue;
-
-                legend.append(createRowLegend(storage.characters[i]));
-            }
         }
 
 
