@@ -56,3 +56,18 @@ td.title
     font-style: italic;
     text-align: center;
 }
+
+
+table.level_up
+{
+    font-size: 13px;
+    text-align: center;
+    width: 100%;
+}
+
+
+td.level_up_title
+{
+    font-weight: bold;
+}
+
