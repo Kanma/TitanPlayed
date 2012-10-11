@@ -571,6 +571,7 @@
             scatter.Set('chart.noyaxis', true);
             scatter.Set('chart.ylabels', false);
             scatter.Set('chart.tickmarks', 'circle');
+            scatter.Set('chart.tooltips.event', 'onclick');
 
             // Draws the extra axe. It's run whenever the scatter object is drawn
             RGraph.AddCustomEventListener(scatter, 'ondraw', function ()
