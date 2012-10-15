@@ -126,7 +126,7 @@ function TP.Button_OnEvent(self, event, ...)
             current_entry = dest_entry;
             reference_time = dest_entry;
             TitanPlayedTimes[name].last = current_entry;
-        else
+        elseif (reference_time ~= nil) then
             TitanPlayedTimes[name].sessions[current_entry].played = TitanPlayedTimes[name].sessions[current_entry].played + (current_time - reference_time);
             reference_time = current_time;
         end
