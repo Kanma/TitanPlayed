@@ -115,6 +115,7 @@ function TP.Button_OnEvent(self, event, ...)
 
     elseif (event == "PLAYER_ENTERING_WORLD") then
         TitanPlayedTimes[name].sessions[current_entry].money = GetMoney();
+        RequestTimePlayed();
 
     elseif (event == "PLAYER_LEAVING_WORLD") then
         local current_time = time();
@@ -145,6 +146,12 @@ function TP.Button_OnEvent(self, event, ...)
         local current_time = time();
         local dest_entry = current_time - (current_time % (3600 * 24));
 
+        reference_time = current_time;
+
+        if (arg1 == 0) then
+            return;
+        end
+
         if (dest_entry ~= current_entry) then
             TitanPlayedTimes[name].sessions[dest_entry].played = arg1;
             TitanPlayedTimes[name].sessions[current_entry].played = arg1 - (current_time - dest_entry);
@@ -153,8 +160,6 @@ function TP.Button_OnEvent(self, event, ...)
         else
             TitanPlayedTimes[name].sessions[current_entry].played = arg1;
         end
-
-        reference_time = current_time;
 
         if (must_display_tooltip) then
             self.tooltip = LibQTip:Acquire("TitanPlayed_Tooltip", 2, "LEFT", "LEFT");
