@@ -85,8 +85,9 @@ function TP.Button_OnEvent(self, event, ...)
     local name = UnitName("player")
 
     if (event == "ADDON_LOADED") then
-        local current_time = time()
-        current_entry = current_time - (current_time % (3600 * 24))
+        local current_time = time();
+        current_entry = current_time - (current_time % (3600 * 24));
+        reference_time = current_time;
 
         if (TitanPlayedTimes[name] == nil) then
             localizedClass, englishClass = UnitClass("player");
@@ -152,7 +153,7 @@ function TP.Button_OnEvent(self, event, ...)
     elseif (event == "TIME_PLAYED_MSG") then
         local arg1, arg2 = ...;
 
-        if (arg1 == 0) then
+        if (arg1 < TitanPlayedTimes[name].sessions[current_entry].played) then
             return;
         end
 
