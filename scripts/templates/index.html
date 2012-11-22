@@ -186,17 +186,23 @@
                 labels[j] = '';
 
                 if (timestamps.length < 31)
-                    labels[j] = date.getUTCDate();
+                    labels[j] = labels[j] + date.getUTCDate();
 
                 if (current_month != date.getUTCMonth())
                 {
-                    labels[j] = labels[j] + '/' + (date.getUTCMonth() + 1);
+                    if (labels[j].length > 0)
+                        labels[j] = labels[j] + '/';
+
+                    labels[j] = labels[j] + (date.getUTCMonth() + 1);
                     current_month = date.getUTCMonth();
                 }
 
                 if (current_year != date.getUTCFullYear())
                 {
-                    labels[j] = labels[j] + '/' + date.getUTCFullYear();
+                    if (labels[j].length > 0)
+                        labels[j] = labels[j] + '/';
+
+                    labels[j] = labels[j] + date.getUTCFullYear();
                     current_year = date.getUTCFullYear();
                 }
             }
