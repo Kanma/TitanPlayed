@@ -109,7 +109,13 @@ function TP.Button_OnEvent(self, event, ...)
         end
 
         if (TitanPlayedTimes[name].sessions[current_entry] == nil) then
-            TitanPlayedTimes[name].sessions[current_entry] = { played = 0; money = 0; };
+            if (TitanPlayedTimes[name].last == nil) then
+                TitanPlayedTimes[name].sessions[current_entry] = { played = 0; money = 0; };
+            else
+                TitanPlayedTimes[name].sessions[current_entry] = { played = TitanPlayedTimes[name].sessions[TitanPlayedTimes[name].last].played;
+                                                                   money = TitanPlayedTimes[name].sessions[TitanPlayedTimes[name].last].money;
+                                                                 };
+            end
             TitanPlayedTimes[name].last = current_entry;
         end
 
@@ -122,10 +128,13 @@ function TP.Button_OnEvent(self, event, ...)
         local dest_entry = current_time - (current_time % (3600 * 24));
 
         if (dest_entry ~= current_entry) then
-            TitanPlayedTimes[name].sessions[dest_entry].played = TitanPlayedTimes[name].sessions[current_entry].played + (current_time - reference_time);
+            TitanPlayedTimes[name].sessions[dest_entry] = { played = TitanPlayedTimes[name].sessions[current_entry].played + (current_time - reference_time);
+                                                            money = TitanPlayedTimes[name].sessions[current_entry].money;
+                                                          };
+
             TitanPlayedTimes[name].sessions[current_entry].played = TitanPlayedTimes[name].sessions[current_entry].played + (dest_entry - reference_time);
             current_entry = dest_entry;
-            reference_time = dest_entry;
+            reference_time = current_time;
             TitanPlayedTimes[name].last = current_entry;
         elseif (reference_time ~= nil) then
             TitanPlayedTimes[name].sessions[current_entry].played = TitanPlayedTimes[name].sessions[current_entry].played + (current_time - reference_time);
@@ -143,17 +152,20 @@ function TP.Button_OnEvent(self, event, ...)
     elseif (event == "TIME_PLAYED_MSG") then
         local arg1, arg2 = ...;
 
+        if (arg1 == 0) then
+            return;
+        end
+
         local current_time = time();
         local dest_entry = current_time - (current_time % (3600 * 24));
 
         reference_time = current_time;
 
-        if (arg1 == 0) then
-            return;
-        end
-
         if (dest_entry ~= current_entry) then
-            TitanPlayedTimes[name].sessions[dest_entry].played = arg1;
+            TitanPlayedTimes[name].sessions[dest_entry] = { played = arg1;
+                                                            money = TitanPlayedTimes[name].sessions[current_entry].money;
+                                                          };
+
             TitanPlayedTimes[name].sessions[current_entry].played = arg1 - (current_time - dest_entry);
             current_entry = dest_entry;
             TitanPlayedTimes[name].last = current_entry;
