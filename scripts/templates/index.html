@@ -638,9 +638,10 @@
         {
             // Prepare the data for the line charts
             var storage = {
-                data_time:  new Array(),
-                data_money: new Array(),
-                last_money: null,
+                data_time:      new Array(),
+                data_mean_time: new Array(),
+                data_money:     new Array(),
+                last_money:     null,
             };
 
             iterateSessions(storage, undefined, {
@@ -648,6 +649,7 @@
                         for (var i = 0; i < storage.timestamps.length; ++i)
                         {
                             storage.data_time[i]  = 0;
+                            storage.data_mean_time[i]  = 0;
                             storage.data_money[i] = null;
                         }
                     },
@@ -680,6 +682,19 @@
                 }
             );
 
+            // Compute the mean of the play time
+            for (var i = 0; i < storage.data_mean_time.length; ++i)
+            {
+                var start = Math.max(i - 5, 0);
+                var stop = Math.min(i + 5, storage.data_mean_time.length - 1);
+
+                var sum = 0;
+                for (var j = start; j <= stop; ++j)
+                    sum += storage.data_time[j];
+
+                storage.data_mean_time[i] = sum / (stop - start + 1);
+            }
+
             // Compute the maximum and minimum values of the y-axis and the labels
             var labels = getDateLabels(storage.timestamps);
 
@@ -707,20 +722,35 @@
             var gutterRight = 100;
             var gutterTop   = 25;
 
+            var line3 = new RGraph.Line('graph_day_played', storage.data_mean_time);
+            line3.Set('chart.gutter.right', gutterRight);
+            line3.Set('chart.gutter.left', gutterLeft);
+            line3.Set('chart.gutter.top', gutterTop);
+            line3.Set('chart.background.barcolor1', 'white');
+            line3.Set('chart.background.barcolor2', 'white');
+            line3.Set('chart.background.grid.autofit.numhlines', max_value_time);
+            line3.Set('chart.background.grid', true);
+            line3.Set('chart.colors', ['#FF7D0A']);
+            line3.Set('chart.fillstyle', ['#FFEF7F']);
+            line3.Set('chart.linewidth', 1);
+            line3.Set('chart.filled', true);
+            line3.Set('chart.hmargin', 0);
+            line3.Set('chart.ymax', max_value_time);
+            line3.Set('chart.noaxes', true);
+            line3.Set('chart.ylabels', false);
+            line3.Draw();
+
             var line1 = new RGraph.Line('graph_day_played', storage.data_time);
             line1.Set('chart.labels', labels);
             line1.Set('chart.gutter.right', gutterRight);
             line1.Set('chart.gutter.left', gutterLeft);
             line1.Set('chart.gutter.top', gutterTop);
-            line1.Set('chart.background.barcolor1', 'white');
-            line1.Set('chart.background.barcolor2', 'white');
-            line1.Set('chart.background.grid.autofit.numhlines', max_value_time);
-            line1.Set('chart.background.grid', true);
-            line1.Set('chart.colors', ['red', 'blue']);
-            line1.Set('chart.key', ['Time played', 'Money']);
+            line1.Set('chart.background.grid', false);
+            line1.Set('chart.colors', ['red', 'FF7D0A', 'blue']);
+            line1.Set('chart.key', ['Time played', 'Average time played', 'Money']);
             line1.Set('chart.key.position', 'gutter');
             line1.Set('chart.key.position.gutter.boxed', false);
-            line1.Set('chart.key.position.x', 475);
+            line1.Set('chart.key.position.x', 350);
             line1.Set('chart.linewidth', 2);
             line1.Set('chart.filled', false);
             line1.Set('chart.hmargin', 0);
@@ -776,7 +806,6 @@
             );
 
             line2.Draw();
-
 
             // Add the 'level up' notifications
             var level_ups = new Array();
