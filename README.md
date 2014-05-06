@@ -45,7 +45,8 @@ The data saved by the TitanPlayed is located at
 
 Here is an example of such file (from the file *scripts/example.lua*):
 
-`TitanPlayedTimes = {
+```lua
+TitanPlayedTimes = {
         ["Bob"] = {
 			["sessions"] = {
 				[1348012800] = {
@@ -107,7 +108,8 @@ Here is an example of such file (from the file *scripts/example.lua*):
 				1348444890, -- [5]
 			},
         },
-}`
+}
+```
 
 Here we have two characters (Bob, a hunter, and John, a warrior). Bob played on two
 different days (represented by the number of seconds since 0 hours, 0 minutes, 0 seconds,
