@@ -71,3 +71,10 @@ td.level_up_title
     font-weight: bold;
 }
 
+
+input#btn_zoom_out,
+input#btn_zoom_in,
+input#btn_next
+{
+    float: right;
+}

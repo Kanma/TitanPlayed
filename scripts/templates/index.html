@@ -40,6 +40,7 @@
         var character_names = $CHARACTER_NAMES$;
         var characters_to_ignore = $CHARACTERS_TO_IGNORE$;
         var characters_colors = $CHARACTERS_COLORS$;
+        var start_index = 0;
 
 
         function getColor(name)
@@ -636,11 +637,237 @@
 
         function drawTotalPlayTime()
         {
+            function _updateGraph(original_storage, start, count)
+            {
+                $('#graph_day_played').remove();
+
+                var canvas          = document.createElement('canvas');
+                canvas.id           = 'graph_day_played';
+                canvas.width        = '1000';
+                canvas.height       = '600';
+                canvas.style.cursor = 'default';
+
+                $(canvas).insertAfter('#daily_activity');
+
+
+                // Crop the original storage
+                start = Math.max(0, start);
+                count = Math.min(original_storage.data_time.length - start, count);
+
+                var storage = {
+                    data_time:      original_storage.data_time.slice(start, start + count),
+                    data_mean_time: original_storage.data_mean_time.slice(start, start + count),
+                    data_money:     original_storage.data_money.slice(start, start + count),
+                    timestamps:     original_storage.timestamps.slice(start, start + count),
+                    last_money:     original_storage.last_money,
+                    characters:     original_storage.characters,
+                };
+
+
+                // Compute the maximum and minimum values of the y-axis and the labels
+                var labels = getDateLabels(storage.timestamps);
+
+                var limits_time  = getLimitsOfCumulatedRows(storage.data_time, 1);
+                var limits_money = getLimitsOfCumulatedRows(storage.data_money, 1);
+
+                var max_value_time = Math.ceil(limits_time.max);
+
+                if (limits_money.max == limits_money.min) {
+                    limits_money.max = limits_money.max + 1000;
+                    limits_money.min = limits_money.min - 1000;
+                    if (limits_money.min < 0) {
+                        limits_money.min = 0;
+                    }
+                }
+
+                var factor = getScaleFactor(limits_money.max - limits_money.min);
+
+                var max_value_money = Math.ceil(limits_money.max / factor) * factor;
+                var min_value_money = Math.floor(limits_money.min / factor) * factor;
+
+
+                // Create the line charts
+                var gutterLeft = 50;
+                var gutterRight = 100;
+                var gutterTop   = 25;
+
+                var line3 = new RGraph.Line('graph_day_played', storage.data_mean_time);
+                line3.Set('chart.gutter.right', gutterRight);
+                line3.Set('chart.gutter.left', gutterLeft);
+                line3.Set('chart.gutter.top', gutterTop);
+                line3.Set('chart.background.barcolor1', 'white');
+                line3.Set('chart.background.barcolor2', 'white');
+                line3.Set('chart.background.grid.autofit.numhlines', max_value_time);
+                line3.Set('chart.background.grid', true);
+                line3.Set('chart.colors', ['#FF7D0A']);
+                line3.Set('chart.fillstyle', ['#FFEF7F']);
+                line3.Set('chart.linewidth', 1);
+                line3.Set('chart.filled', true);
+                line3.Set('chart.hmargin', 0);
+                line3.Set('chart.ymax', max_value_time);
+                line3.Set('chart.noaxes', true);
+                line3.Set('chart.ylabels', false);
+                line3.Draw();
+
+                var line1 = new RGraph.Line('graph_day_played', storage.data_time);
+                line1.Set('chart.labels', labels);
+                line1.Set('chart.gutter.right', gutterRight);
+                line1.Set('chart.gutter.left', gutterLeft);
+                line1.Set('chart.gutter.top', gutterTop);
+                line1.Set('chart.background.grid', false);
+                line1.Set('chart.colors', ['red', 'FF7D0A', 'blue']);
+                line1.Set('chart.key', ['Time played', 'Average time played', 'Money']);
+                line1.Set('chart.key.position', 'gutter');
+                line1.Set('chart.key.position.gutter.boxed', false);
+                line1.Set('chart.key.position.x', 350);
+                line1.Set('chart.linewidth', 2);
+                line1.Set('chart.filled', false);
+                line1.Set('chart.hmargin', 0);
+                line1.Set('chart.units.post', 'h');
+                line1.Set('chart.ymax', max_value_time);
+                line1.Set('chart.noyaxis', true);
+                line1.Set('chart.ylabels', false);
+                line1.Draw();
+
+                var line2 = new RGraph.Line('graph_day_played', storage.data_money);
+                line2.Set('chart.gutter.left', 45);
+                line2.Set('chart.gutter.right', gutterRight);
+                line2.Set('chart.gutter.left', gutterLeft);
+                line2.Set('chart.gutter.top', gutterTop);
+                line2.Set('chart.background.grid', false);
+                line2.Set('chart.colors', ['blue']);
+                line2.Set('chart.linewidth', 2);
+                line2.Set('chart.filled', false);
+                line2.Set('chart.hmargin', 0);
+                line2.Set('chart.units.post', 'po');
+                line2.Set('chart.ymax', max_value_money);
+                line2.Set('chart.ymin', min_value_money);
+                line2.Set('chart.noaxes', true);
+                line2.Set('chart.ylabels', false);
+
+
+                // Draws the extra axes. It's run whenever the line2 object is drawn
+                RGraph.AddCustomEventListener(line2, 'ondraw', function ()
+                    {
+                        RGraph.DrawAxes(line1, {
+                                                'axis.x': gutterLeft,
+                                                'axis.color': 'red',
+                                                'axis.text.color': 'red',
+                                                'axis.max': max_value_time,
+                                                'axis.numlabels': max_value_time,
+                                                'axis.numticks': max_value_time * 2,
+                                                'axis.min': 0,
+                                                'axis.align': 'left',
+                                                'axis.units.post': 'h',
+                                                'axis.scale.decimals': 0,
+                                               });
+                        RGraph.DrawAxes(line2, {
+                                                'axis.x': line1.canvas.width - gutterRight,
+                                                'axis.color': 'blue',
+                                                'axis.text.color': 'blue',
+                                                'axis.max': max_value_money,
+                                                'axis.min': min_value_money,
+                                                'axis.numlabels': max_value_time,
+                                                'axis.numticks': max_value_time * 2,
+                                                'axis.align': 'right',
+                                                'axis.units.post': ' po',
+                                               });
+                    }
+                );
+
+                line2.Draw();
+
+
+                // Add the 'level up' notifications
+                var level_ups = new Array();
+                for (var character_index = 0; character_index < storage.characters.length; ++character_index)
+                {
+                    var character_entry = entries[storage.characters[character_index]];
+
+                    if (character_entry.levels_history === undefined)
+                        continue;
+
+                    for (var i = 0; i < character_entry.levels_history.length; ++i)
+                    {
+                        var timestamp = character_entry.levels_history[i];
+                        if (timestamp == 0)
+                            continue;
+
+                        var timestamp2 = timestamp - (timestamp % (3600 * 24));
+
+                        if (level_ups[timestamp2] === undefined)
+                        {
+                            var date = new Date(timestamp2 * 1000);
+
+                            var day = date.getDate();
+                            if (day < 10)
+                                day = '0' + day;
+
+                            var month = date.getMonth() + 1;
+                            if (month < 10)
+                                month = '0' + month;
+
+                            var year = date.getFullYear();
+
+                            level_ups[timestamp2] = new Array();
+                            level_ups[timestamp2].date = day + '/' + month + '/' + date.getUTCFullYear();
+                            level_ups[timestamp2].entries = [];
+                        }
+
+                        var date = new Date(timestamp * 1000);
+
+                        var hours = date.getHours();
+                        if (hours < 10)
+                            hours = '0' + hours;
+
+                        var minutes = date.getMinutes();
+                        if (minutes < 10)
+                            minutes = '0' + minutes;
+
+                        var entry = { hour: hours + ':' + minutes,
+                                      character: storage.characters[character_index],
+                                      level: i + 1,
+                                    };
+
+                        level_ups[timestamp2].entries[level_ups[timestamp2].entries.length] = entry;
+                    }
+                }
+
+                for (var i = 0; i < storage.timestamps.length; ++i)
+                {
+                    if (level_ups[storage.timestamps[i]] === undefined)
+                        continue;
+
+                    var x = (1000 - gutterRight - gutterLeft) / (labels.length - 1) * i + gutterLeft - 6;
+
+                    var tooltip = '<table class="level_up"><tr><td colspan="3" class="level_up_title">' + level_ups[storage.timestamps[i]].date + '</td></tr>';
+
+                    level_ups[storage.timestamps[i]].entries.sort(function(a, b) {
+                            if (a.hour < b.hour)
+                                return -1;
+                            else if (a.hour > b.hour)
+                                return 1;
+                            return 0;
+                        });
+
+                    for (var j = 0; j < level_ups[storage.timestamps[i]].entries.length; ++j)
+                        tooltip += '<tr><td>' + level_ups[storage.timestamps[i]].entries[j].hour + '</td><td>' + level_ups[storage.timestamps[i]].entries[j].character + '</td><td>' + level_ups[storage.timestamps[i]].entries[j].level + '</td></tr>';
+
+                    tooltip += '</table>';
+
+                    var image = new RGraph.Drawing.Image('graph_day_played', x, line1.getYCoord(storage.data_time[i]) - 20, 'images/up_arrow.gif');
+                    image.Set('chart.tooltips', [tooltip]);
+                    image.Draw();
+                }
+            }
+
+
             // Prepare the data for the line charts
             var storage = {
                 data_time:      new Array(),
                 data_mean_time: new Array(),
                 data_money:     new Array(),
+                timestamps:     new Array(),
                 last_money:     null,
             };
 
@@ -695,199 +922,70 @@
                 storage.data_mean_time[i] = sum / (stop - start + 1);
             }
 
-            // Compute the maximum and minimum values of the y-axis and the labels
-            var labels = getDateLabels(storage.timestamps);
 
-            var limits_time = getLimitsOfCumulatedRows(storage.data_time, 1);
-            var limits_money = getLimitsOfCumulatedRows(storage.data_money, 1);
-
-            var max_value_time = Math.ceil(limits_time.max);
-
-            if (limits_money.max == limits_money.min) {
-                limits_money.max = limits_money.max + 1000;
-                limits_money.min = limits_money.min - 1000;
-                if (limits_money.min < 0) {
-                    limits_money.min = 0;
-                }
-            }
-
-            var factor = getScaleFactor(limits_money.max - limits_money.min);
-
-            var max_value_money = Math.ceil(limits_money.max / factor) * factor;
-            var min_value_money = Math.floor(limits_money.min / factor) * factor;
-
-
-            // Create the line charts
-            var gutterLeft = 50;
-            var gutterRight = 100;
-            var gutterTop   = 25;
-
-            var line3 = new RGraph.Line('graph_day_played', storage.data_mean_time);
-            line3.Set('chart.gutter.right', gutterRight);
-            line3.Set('chart.gutter.left', gutterLeft);
-            line3.Set('chart.gutter.top', gutterTop);
-            line3.Set('chart.background.barcolor1', 'white');
-            line3.Set('chart.background.barcolor2', 'white');
-            line3.Set('chart.background.grid.autofit.numhlines', max_value_time);
-            line3.Set('chart.background.grid', true);
-            line3.Set('chart.colors', ['#FF7D0A']);
-            line3.Set('chart.fillstyle', ['#FFEF7F']);
-            line3.Set('chart.linewidth', 1);
-            line3.Set('chart.filled', true);
-            line3.Set('chart.hmargin', 0);
-            line3.Set('chart.ymax', max_value_time);
-            line3.Set('chart.noaxes', true);
-            line3.Set('chart.ylabels', false);
-            line3.Draw();
-
-            var line1 = new RGraph.Line('graph_day_played', storage.data_time);
-            line1.Set('chart.labels', labels);
-            line1.Set('chart.gutter.right', gutterRight);
-            line1.Set('chart.gutter.left', gutterLeft);
-            line1.Set('chart.gutter.top', gutterTop);
-            line1.Set('chart.background.grid', false);
-            line1.Set('chart.colors', ['red', 'FF7D0A', 'blue']);
-            line1.Set('chart.key', ['Time played', 'Average time played', 'Money']);
-            line1.Set('chart.key.position', 'gutter');
-            line1.Set('chart.key.position.gutter.boxed', false);
-            line1.Set('chart.key.position.x', 350);
-            line1.Set('chart.linewidth', 2);
-            line1.Set('chart.filled', false);
-            line1.Set('chart.hmargin', 0);
-            line1.Set('chart.units.post', 'h');
-            line1.Set('chart.ymax', max_value_time);
-            line1.Set('chart.noyaxis', true);
-            line1.Set('chart.ylabels', false);
-            line1.Draw();
-
-            var line2 = new RGraph.Line('graph_day_played', storage.data_money);
-            line2.Set('chart.gutter.left', 45);
-            line2.Set('chart.gutter.right', gutterRight);
-            line2.Set('chart.gutter.left', gutterLeft);
-            line2.Set('chart.gutter.top', gutterTop);
-            line2.Set('chart.background.grid', false);
-            line2.Set('chart.colors', ['blue']);
-            line2.Set('chart.linewidth', 2);
-            line2.Set('chart.filled', false);
-            line2.Set('chart.hmargin', 0);
-            line2.Set('chart.units.post', 'po');
-            line2.Set('chart.ymax', max_value_money);
-            line2.Set('chart.ymin', min_value_money);
-            line2.Set('chart.noaxes', true);
-            line2.Set('chart.ylabels', false);
-
-            // Draws the extra axes. It's run whenever the line2 object is drawn
-            RGraph.AddCustomEventListener(line2, 'ondraw', function ()
-                {
-                    RGraph.DrawAxes(line1, {
-                                            'axis.x': gutterLeft,
-                                            'axis.color': 'red',
-                                            'axis.text.color': 'red',
-                                            'axis.max': max_value_time,
-                                            'axis.numlabels': max_value_time,
-                                            'axis.numticks': max_value_time * 2,
-                                            'axis.min': 0,
-                                            'axis.align': 'left',
-                                            'axis.units.post': 'h',
-                                            'axis.scale.decimals': 0,
-                                           });
-                    RGraph.DrawAxes(line2, {
-                                            'axis.x': line1.canvas.width - gutterRight,
-                                            'axis.color': 'blue',
-                                            'axis.text.color': 'blue',
-                                            'axis.max': max_value_money,
-                                            'axis.min': min_value_money,
-                                            'axis.numlabels': max_value_time,
-                                            'axis.numticks': max_value_time * 2,
-                                            'axis.align': 'right',
-                                            'axis.units.post': ' po',
-                                           });
-                }
-            );
-
-            line2.Draw();
-
-            // Add the 'level up' notifications
-            var level_ups = new Array();
-            for (var character_index = 0; character_index < storage.characters.length; ++character_index)
+            if (storage.data_time.length > 365)
             {
-                var character_entry = entries[storage.characters[character_index]];
+                $('#btn_zoom_in').removeAttr('disabled');
+                $('#btn_zoom_out').attr('disabled', 'disabled');
+                $('#btn_previous').hide();
+                $('#btn_next').hide();
 
-                if (character_entry.levels_history === undefined)
-                    continue;
+                $('#btn_zoom_in').click(function() {
+                    $(this).attr('disabled', 'disabled');
+                    $('#btn_zoom_out').removeAttr('disabled');
 
-                for (var i = 0; i < character_entry.levels_history.length; ++i)
-                {
-                    var timestamp = character_entry.levels_history[i];
-                    if (timestamp == 0)
-                        continue;
+                    $('#btn_previous').show();
+                    $('#btn_next').show();
 
-                    var timestamp2 = timestamp - (timestamp % (3600 * 24));
+                    $('#btn_previous').removeAttr('disabled');
+                    $('#btn_next').attr('disabled', 'disabled');
 
-                    if (level_ups[timestamp2] === undefined)
-                    {
-                        var date = new Date(timestamp2 * 1000);
+                    start_index = storage.data_time.length - 366;
 
-                        var day = date.getDate();
-                        if (day < 10)
-                            day = '0' + day;
+                    _updateGraph(storage, start_index, 365);
+                });
 
-                        var month = date.getMonth() + 1;
-                        if (month < 10)
-                            month = '0' + month;
+                $('#btn_zoom_out').click(function() {
+                    $(this).attr('disabled', 'disabled');
+                    $('#btn_zoom_in').removeAttr('disabled');
 
-                        var year = date.getFullYear();
+                    $('#btn_previous').hide();
+                    $('#btn_next').hide();
 
-                        level_ups[timestamp2] = new Array();
-                        level_ups[timestamp2].date = day + '/' + month + '/' + date.getUTCFullYear();
-                        level_ups[timestamp2].entries = [];
-                    }
+                    _updateGraph(storage, 0, storage.data_time.length);
+                });
 
-                    var date = new Date(timestamp * 1000);
+                $('#btn_previous').click(function() {
+                    start_index -= 182;
 
-                    var hours = date.getHours();
-                    if (hours < 10)
-                        hours = '0' + hours;
+                    if (start_index <= 0)
+                        $(this).attr('disabled', 'disabled');
 
-                    var minutes = date.getMinutes();
-                    if (minutes < 10)
-                        minutes = '0' + minutes;
+                    $('#btn_next').removeAttr('disabled');
 
-                    var entry = { hour: hours + ':' + minutes,
-                                  character: storage.characters[character_index],
-                                  level: i + 1,
-                                };
+                    _updateGraph(storage, start_index, 365);
+                });
 
-                    level_ups[timestamp2].entries[level_ups[timestamp2].entries.length] = entry;
-                }
+                $('#btn_next').click(function() {
+                    start_index += 182;
+
+                    if (start_index >= storage.data_time.length - 366)
+                        $(this).attr('disabled', 'disabled');
+
+                    $('#btn_previous').removeAttr('disabled');
+
+                    _updateGraph(storage, start_index, 365);
+                });
             }
-
-            for (var i = 0; i < storage.timestamps.length; ++i)
+            else
             {
-                if (level_ups[storage.timestamps[i]] === undefined)
-                    continue;
-
-                var x = (1000 - gutterRight - gutterLeft) / (labels.length - 1) * i + gutterLeft - 6;
-
-                var tooltip = '<table class="level_up"><tr><td colspan="3" class="level_up_title">' + level_ups[storage.timestamps[i]].date + '</td></tr>';
-
-                level_ups[storage.timestamps[i]].entries.sort(function(a, b) {
-                        if (a.hour < b.hour)
-                            return -1;
-                        else if (a.hour > b.hour)
-                            return 1;
-                        return 0;
-                    });
-
-                for (var j = 0; j < level_ups[storage.timestamps[i]].entries.length; ++j)
-                    tooltip += '<tr><td>' + level_ups[storage.timestamps[i]].entries[j].hour + '</td><td>' + level_ups[storage.timestamps[i]].entries[j].character + '</td><td>' + level_ups[storage.timestamps[i]].entries[j].level + '</td></tr>';
-
-                tooltip += '</table>';
-
-                var image = new RGraph.Drawing.Image('graph_day_played', x, line1.getYCoord(storage.data_time[i]) - 20, 'images/up_arrow.gif');
-                image.Set('chart.tooltips', [tooltip]);
-                image.Draw();
+                $('#btn_previous').hide();
+                $('#btn_next').hide();
+                $('#btn_zoom_in').hide();
+                $('#btn_zoom_out').hide();
             }
+
+            _updateGraph(storage, 0, storage.data_time.length);
         }
 
 
@@ -996,8 +1094,11 @@
         <canvas id="graph_character_money_activity" width="1000" height="600" style="cursor: default;"></canvas>
 
 
-        <h2>Daily activity</h2>
-        <canvas id="graph_day_played" width="1000" height="600" style="cursor: default;"></canvas>
+        <h2 id="daily_activity">Daily activity</h2>
+        <input id="btn_previous" type="button" value="&lt;&lt;" />
+        <input id="btn_zoom_out" type="button" value="Zoom out" disabled="disabled" />
+        <input id="btn_zoom_in" type="button" value="Zoom in" disabled="disabled" />
+        <input id="btn_next" type="button" value="&gt;&gt;" />
 
 
         <h2>Per-character percentage of time played</h2>
