@@ -72,6 +72,7 @@ function TP.Button_OnLoad(self)
     self:RegisterEvent("PLAYER_LEAVING_WORLD");
     self:RegisterEvent("PLAYER_LEVEL_UP");
     self:RegisterEvent("PLAYER_MONEY");
+    self:RegisterEvent("EQUIPMENT_SETS_CHANGED");
     self:RegisterEvent("TIME_PLAYED_MSG");
 end
 
@@ -105,7 +106,7 @@ function TP.Button_OnEvent(self, event, ...)
             TitanPlayedTimes[name].levels_history = {};
         end
 
-		for i = table.getn(TitanPlayedTimes[name].levels_history) + 1, TitanPlayedTimes[name].level do
+        for i = table.getn(TitanPlayedTimes[name].levels_history) + 1, TitanPlayedTimes[name].level do
             TitanPlayedTimes[name].levels_history[i] = 0;
         end
 
@@ -149,6 +150,23 @@ function TP.Button_OnEvent(self, event, ...)
 
     elseif (event == "PLAYER_MONEY") then
         TitanPlayedTimes[name].sessions[current_entry].money = GetMoney();
+
+    elseif (event == "EQUIPMENT_SETS_CHANGED") then
+        local count = GetNumEquipmentSets();
+        for i=1, count do
+            local equipment_set_name, equipment_set_icon, equipment_set_id, isEquipped = GetEquipmentSetInfo(i);
+            if (isEquipped) then
+                local overall, equipped = GetAverageItemLevel();
+
+                if (TitanPlayedTimes[name].sessions[current_entry]['ilvl'] == nil) then
+                    TitanPlayedTimes[name].sessions[current_entry].ilvl = {};
+                end
+
+                TitanPlayedTimes[name].sessions[current_entry].ilvl[equipment_set_name] = equipped;
+
+                break;
+            end
+        end
 
     elseif (event == "TIME_PLAYED_MSG") then
         local arg1, arg2 = ...;
