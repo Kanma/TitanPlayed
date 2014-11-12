@@ -47,20 +47,26 @@ Here is an example of such file (from the file *scripts/example.lua*):
 
 ```lua
 TitanPlayedTimes = {
-        ["Bob"] = {
+		["Bob"] = {
 			["sessions"] = {
 				[1348012800] = {
 					["money"] = 15000000,
 					["played"] = 439874,
+					["ilvl"] = {
+						["Standard"] = 450,
+					},
 				},
 				[1348444800] = {
 					["money"] = 20000000,
 					["played"] = 441001,
+					["ilvl"] = {
+						["Standard"] = 470,
+					},
 				},
 			},
-            ["last"] = 1348444800,
-            ["class"] = "HUNTER",
-            ["level"] = 10,
+			["last"] = 1348444800,
+			["class"] = "HUNTER",
+			["level"] = 10,
 			["levels_history"] = {
 				1348012800, -- [1]
 				1348012900, -- [2]
@@ -73,33 +79,48 @@ TitanPlayedTimes = {
 				1348013600, -- [9]
 				1348013700, -- [10]
 			},
-        },
-        ["John"] = {
+		},
+		["John"] = {
 			["sessions"] = {
 				[1348012800] = {
 					["money"] = 8000000,
 					["played"] = 339784,
+					["ilvl"] = {
+						["Standard"] = 460,
+					},
 				},
 				[1348185600] = {
 					["money"] = 16000000,
 					["played"] = 345900,
+					["ilvl"] = {
+						["Standard"] = 480,
+					},
 				},
 				[1348272000] = {
 					["money"] = 33000000,
 					["played"] = 349877,
+					["ilvl"] = {
+						["Standard"] = 490,
+					},
 				},
 				[1348358400] = {
 					["money"] = 50000000,
 					["played"] = 353909,
+					["ilvl"] = {
+						["Standard"] = 510,
+					},
 				},
 				[1348444800] = {
 					["money"] = 100000000,
 					["played"] = 355062,
+					["ilvl"] = {
+						["Standard"] = 525,
+					},
 				},
 			},
-            ["last"] = 1348444800,
-            ["class"] = "WARRIOR",
-            ["level"] = 5,
+			["last"] = 1348444800,
+			["class"] = "WARRIOR",
+			["level"] = 5,
 			["levels_history"] = {
 				1348185650, -- [1]
 				1348271000, -- [2]
@@ -107,7 +128,7 @@ TitanPlayedTimes = {
 				1348444800, -- [4]
 				1348444890, -- [5]
 			},
-        },
+		},
 }
 ```
 
@@ -136,15 +157,24 @@ The default value for *dest_folder* is `./html`.
 It will produce a web page in *dest_folder* (complete with CSS and JavaScript files)
 displaying various interactive graphs:
 
-* your activity per character
+* the time played each day on each character
+* your total fortune
+* the daily activity of your fortune
 * your activity per day
+* the progression of the iLevel of your characters
 * your percentage time played with each character for various periods
 
-![Activity per character](https://raw.github.com/Kanma/TitanPlayed/master/images/html1.png)
+![Time played on each character](https://raw.github.com/Kanma/TitanPlayed/master/images/html_time_played_per_character.png)
 
-![Activity per day](https://raw.github.com/Kanma/TitanPlayed/master/images/html2.png)
+![Fortune](https://raw.github.com/Kanma/TitanPlayed/master/images/html_fortune.png)
 
-![Activity per day](https://raw.github.com/Kanma/TitanPlayed/master/images/html3.png)
+![Money activity](https://raw.github.com/Kanma/TitanPlayed/master/images/html_money_activity.png)
+
+![Daily activity](https://raw.github.com/Kanma/TitanPlayed/master/images/html_daily_activity.png)
+
+![iLevel progression](https://raw.github.com/Kanma/TitanPlayed/master/images/html_ilevel_progression.png)
+
+![Per-character percentage of time played](https://raw.github.com/Kanma/TitanPlayed/master/images/html_time_played.png)
 
 If you want to ignore some characters, or to change their colors, you can copy the file
 *settings_example.py* (your copy must be called *settings.py* and be located alongside
