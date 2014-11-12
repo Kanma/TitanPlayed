@@ -40,12 +40,18 @@
         var character_names = $CHARACTER_NAMES$;
         var characters_to_ignore = $CHARACTERS_TO_IGNORE$;
         var characters_colors = $CHARACTERS_COLORS$;
+
+        var ilevel_progression_minimum = $ILEVEL_PROGRESSION_MINIMUM$;
+        var ilevel_progression_maximum = $ILEVEL_PROGRESSION_MAXIMUM$;
+
         var start_index = 0;
 
 
-        function getColor(name)
+        function getColor(name, equipment_set)
         {
-            if (characters_colors[name] !== undefined)
+            if ((equipment_set !== undefined) && (characters_colors[name + '/' + equipment_set] !== undefined))
+                return characters_colors[name + '/' + equipment_set];
+            else if (characters_colors[name] !== undefined)
                 return characters_colors[name];
             else if (CLASS_COLORS[entries[name].class] !== undefined)
                 return CLASS_COLORS[entries[name].class];
@@ -715,7 +721,7 @@
                 line1.Set('chart.gutter.left', gutterLeft);
                 line1.Set('chart.gutter.top', gutterTop);
                 line1.Set('chart.background.grid', false);
-                line1.Set('chart.colors', ['red', 'FF7D0A', 'blue']);
+                line1.Set('chart.colors', ['red', '#FF7D0A', 'blue']);
                 line1.Set('chart.key', ['Time played', 'Average time played', 'Money']);
                 line1.Set('chart.key.position', 'gutter');
                 line1.Set('chart.key.position.gutter.boxed', false);
@@ -989,6 +995,221 @@
         }
 
 
+        function drawILevelProgression()
+        {
+            function _updateGraph(original_storage, start, count)
+            {
+                $('#graph_ilevel_progression').remove();
+
+                var canvas          = document.createElement('canvas');
+                canvas.id           = 'graph_ilevel_progression';
+                canvas.width        = '1000';
+                canvas.height       = '600';
+                canvas.style.cursor = 'default';
+
+                $(canvas).insertAfter('#ilevel_progression');
+
+
+                // Crop the original storage
+                start = Math.max(0, start);
+                count = Math.min(original_storage.timestamps.length - start, count);
+
+                var storage = {
+                    timestamps: original_storage.timestamps.slice(start, start + count),
+                    characters: original_storage.characters,
+                    ilevels:    [],
+                };
+
+                for (var i = 0; i < original_storage.ilevels.length; ++i)
+                {
+                    storage.ilevels[i] = {};
+
+                    var equipment_set_names = Object.keys(original_storage.ilevels[i]);
+                    for (var j = 0; j < equipment_set_names.length; ++j)
+                    {
+                        var equipment_set = equipment_set_names[j];
+                        storage.ilevels[i][equipment_set] = original_storage.ilevels[i][equipment_set].slice(start, start + count);
+                    }
+                }
+
+
+                // Compute the maximum and minimum values of the y-axis and the labels
+                var labels = getDateLabels(storage.timestamps);
+
+                var limits_time  = getLimitsOfCumulatedRows(storage.timestamps, 1);
+                var max_value_time = Math.ceil(limits_time.max);
+
+
+                // Create the line charts
+                var gutterLeft = 50;
+                var gutterRight = 100;
+                var gutterTop   = 25;
+
+                var last_line = null;
+
+                for (var i = 0; i < storage.ilevels.length; ++i)
+                {
+                    var equipment_set_names = Object.keys(storage.ilevels[i]);
+                    for (var j = 0; j < equipment_set_names.length; ++j)
+                    {
+                        var equipment_set = equipment_set_names[j];
+
+                        if (storage.ilevels[i][equipment_set].length <= 1)
+                            continue;
+
+                        if (last_line != null)
+                            last_line.Draw();
+
+                        var line = new RGraph.Line('graph_ilevel_progression', storage.ilevels[i][equipment_set]);
+                        line.Set('chart.gutter.right', gutterRight);
+                        line.Set('chart.gutter.left', gutterLeft);
+                        line.Set('chart.gutter.top', gutterTop);
+                        line.Set('chart.colors', [ getColor(storage.characters[i], equipment_set) ]);
+                        line.Set('chart.linewidth', 2);
+                        line.Set('chart.hmargin', 0);
+                        line.Set('chart.ymax', ilevel_progression_maximum);
+                        line.Set('chart.ymin', ilevel_progression_minimum);
+                        line.Set('chart.ylabels', false);
+
+                        if (last_line == null)
+                        {
+                            line.Set('chart.labels', labels);
+                            line.Set('chart.background.barcolor1', 'white');
+                            line.Set('chart.background.barcolor2', 'white');
+                            line.Set('chart.background.grid.autofit.numhlines', (ilevel_progression_maximum - ilevel_progression_minimum) / 100);
+                            line.Set('chart.background.grid', true);
+                            line.Set('chart.noyaxis', true);
+                        }
+                        else
+                        {
+                            line.Set('chart.noaxes', true);
+                            line.Set('chart.background.grid', false);
+                            line.Set('chart.filled', false);
+                        }
+
+                        last_line = line;
+                    }
+                }
+
+                // Draws the extra axes. It's run whenever the last_line object is drawn
+                RGraph.AddCustomEventListener(last_line, 'ondraw', function ()
+                    {
+                        RGraph.DrawAxes(last_line, {
+                                                'axis.x': gutterLeft,
+                                                'axis.max': ilevel_progression_maximum,
+                                                'axis.min': ilevel_progression_minimum,
+                                                'axis.numlabels': (ilevel_progression_maximum - ilevel_progression_minimum) / 100,
+                                                'axis.numticks': (ilevel_progression_maximum - ilevel_progression_minimum) / 50,
+                                                'axis.align': 'left',
+                                                'axis.scale.decimals': 0,
+                                               });
+                    }
+                );
+
+                last_line.Draw();
+            }
+
+
+            // Prepare the data for the line charts
+            var storage = {
+                ilevels:                     [],
+                timestamps:                  new Array(),
+                first_timestamp_with_values: null,
+            };
+
+            iterateSessions(storage, undefined, {
+                onIterationStarted: function(storage) {
+                    for (var i = 0; i < storage.characters.length; ++i)
+                        storage.ilevels[i] = null;
+                    },
+
+                onCharacterStarted: function(storage, character_index) {
+                    storage.ilevels[character_index] = {};
+                    },
+
+                onData: function(storage, character_index, timestamp_index, values, previous_values) {
+                        if ((values !== null) && (values.ilvl !== undefined))
+                        {
+                            if ((storage.first_timestamp_with_values === null) || (storage.first_timestamp_with_values > timestamp_index))
+                                storage.first_timestamp_with_values = timestamp_index;
+
+                            var equipment_set_names = Object.keys(values.ilvl);
+
+                            for (var i = 0; i < equipment_set_names.length; ++i)
+                            {
+                                var equipment_set = equipment_set_names[i];
+
+                                if (storage.ilevels[character_index][equipment_set] === undefined)
+                                {
+                                    storage.ilevels[character_index][equipment_set] = new Array();
+
+                                    for (var j = 0; j < storage.timestamps.length; ++j)
+                                        storage.ilevels[character_index][equipment_set][j] = null;
+                                }
+
+                                storage.ilevels[character_index][equipment_set][timestamp_index] = values.ilvl[equipment_set];
+                            }
+                        }
+                    },
+                }
+            );
+
+            if (storage.first_timestamp_with_values === null)
+                return;
+
+            storage.timestamps.splice(0, storage.first_timestamp_with_values);
+
+            for (var i = 0; i < storage.ilevels.length; ++i)
+            {
+                var equipment_set_names = Object.keys(storage.ilevels[i]);
+                for (var j = 0; j < equipment_set_names.length; ++j)
+                {
+                    var equipment_set = equipment_set_names[j];
+
+                    if (storage.first_timestamp_with_values > 0)
+                        storage.ilevels[i][equipment_set].splice(0, storage.first_timestamp_with_values);
+
+                    var nb = storage.ilevels[i][equipment_set].length;
+
+                    if (nb <= 1)
+                        continue;
+
+                    if (storage.ilevels[i][equipment_set][nb - 1] === null)
+                    {
+                        for (var k = nb - 2; k >= 0; --k)
+                        {
+                            if (storage.ilevels[i][equipment_set][k] !== null)
+                            {
+                                storage.ilevels[i][equipment_set][nb - 1] = storage.ilevels[i][equipment_set][k];
+                                break;
+                            }
+                        }
+                    }
+
+                    // Special case: very first day of data for the character
+                    else
+                    {
+                        var must_add_fake_value = true;
+
+                        for (var k = nb - 2; k >= 0; --k)
+                        {
+                            if (storage.ilevels[i][equipment_set][k] !== null)
+                            {
+                                must_add_fake_value = false;
+                                break;
+                            }
+                        }
+
+                        if (must_add_fake_value)
+                            storage.ilevels[i][equipment_set][nb - 2] = storage.ilevels[i][equipment_set][nb - 1];
+                    }
+                }
+            }
+
+            _updateGraph(storage, 0, storage.timestamps.length);
+        }
+
+
         function drawCharactersPie(canvas_id, limit)
         {
             // Prepare the data for the pie chart
@@ -1101,6 +1322,9 @@
         <input id="btn_next" type="button" value="&gt;&gt;" />
 
 
+        <h2 id="ilevel_progression">iLevel progression</h2>
+
+
         <h2>Per-character percentage of time played</h2>
         <table>
             <tr>
@@ -1155,6 +1379,7 @@
             drawFortune();
             drawPerCharacterMoneyActivity();
             drawTotalPlayTime();
+            drawILevelProgression();
             drawCharactersPie('graph_characters_pie_all', null);
             drawCharactersPie('graph_characters_pie_2_months', 60);
             drawCharactersPie('graph_characters_pie_1_month', 30);

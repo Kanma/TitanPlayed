@@ -23,8 +23,11 @@ dest = os.path.abspath(dest)
 
 
 # Try to import the user's custom settings
-CHARACTERS_TO_IGNORE = []
-CHARACTERS_COLORS = {}
+CHARACTERS_TO_IGNORE       = []
+CHARACTERS_COLORS          = {}
+ILEVEL_PROGRESSION_MINIMUM = 0
+ILEVEL_PROGRESSION_MAXIMUM = 700
+
 try:
     module = __import__('settings')
 
@@ -33,6 +36,12 @@ try:
 
     if hasattr(module, 'CHARACTERS_COLORS'):
         CHARACTERS_COLORS = module.CHARACTERS_COLORS
+
+    if hasattr(module, 'ILEVEL_PROGRESSION_MINIMUM'):
+        ILEVEL_PROGRESSION_MINIMUM = module.ILEVEL_PROGRESSION_MINIMUM
+
+    if hasattr(module, 'ILEVEL_PROGRESSION_MAXIMUM'):
+        ILEVEL_PROGRESSION_MAXIMUM = module.ILEVEL_PROGRESSION_MAXIMUM
 except:
     pass
 
@@ -105,7 +114,9 @@ content = content.replace('$ENTRIES$', entries_stringified). \
                   replace('$TIMETAMPS$', str(timestamps)).   \
                   replace('$CHARACTER_NAMES$', str(map(lambda x: str(x), names))). \
                   replace('$CHARACTERS_TO_IGNORE$', str(CHARACTERS_TO_IGNORE)). \
-                  replace('$CHARACTERS_COLORS$', str(CHARACTERS_COLORS))
+                  replace('$CHARACTERS_COLORS$', str(CHARACTERS_COLORS)). \
+                  replace('$ILEVEL_PROGRESSION_MINIMUM$', str(ILEVEL_PROGRESSION_MINIMUM)). \
+                  replace('$ILEVEL_PROGRESSION_MAXIMUM$', str(ILEVEL_PROGRESSION_MAXIMUM))
 
 output_file = open(os.path.join(dest, 'index.html'), 'w')
 output_file.write(content)
