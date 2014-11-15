@@ -1174,34 +1174,20 @@
                     if (nb <= 1)
                         continue;
 
-                    if (storage.ilevels[i][equipment_set][nb - 1] === null)
+                    var last_value = null;
+                    for (var k = 0; k < nb; ++k)
                     {
-                        for (var k = nb - 2; k >= 0; --k)
+                        if (storage.ilevels[i][equipment_set][k] !== null)
                         {
-                            if (storage.ilevels[i][equipment_set][k] !== null)
-                            {
-                                storage.ilevels[i][equipment_set][nb - 1] = storage.ilevels[i][equipment_set][k];
-                                break;
-                            }
+                            if ((last_value === null) && (k > 0))
+                                storage.ilevels[i][equipment_set][k-1] = storage.ilevels[i][equipment_set][k];
+
+                            last_value = storage.ilevels[i][equipment_set][k];
                         }
-                    }
-
-                    // Special case: very first day of data for the character
-                    else
-                    {
-                        var must_add_fake_value = true;
-
-                        for (var k = nb - 2; k >= 0; --k)
+                        else if ((storage.ilevels[i][equipment_set][k] === null) && (last_value !== null))
                         {
-                            if (storage.ilevels[i][equipment_set][k] !== null)
-                            {
-                                must_add_fake_value = false;
-                                break;
-                            }
+                            storage.ilevels[i][equipment_set][k] = last_value;
                         }
-
-                        if (must_add_fake_value)
-                            storage.ilevels[i][equipment_set][nb - 2] = storage.ilevels[i][equipment_set][nb - 1];
                     }
                 }
             }
