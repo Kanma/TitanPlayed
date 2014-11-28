@@ -21,6 +21,13 @@ TP.menu_hide      = "Hide";
 TP.version = tostring(GetAddOnMetadata(TP.addon, "Version")) or "Unknown";
 TP.author  = GetAddOnMetadata(TP.addon, "Author") or "Unknown";
 
+-- Currency ids
+TP.CURRENCY_APEXIS_CRISTALS    = 823;
+TP.CURRENCY_GARRISON_RESOURCES = 824;
+TP.CURRENCY_CONQUEST_POINTS    = 390;
+TP.CURRENCY_HONOR_POINTS       = 392;
+
+
 
 -- ***************************** SAVED VARIABLES ****************************
 
@@ -72,6 +79,7 @@ function TP.Button_OnLoad(self)
     self:RegisterEvent("PLAYER_LEAVING_WORLD");
     self:RegisterEvent("PLAYER_LEVEL_UP");
     self:RegisterEvent("PLAYER_MONEY");
+    self:RegisterEvent("CURRENCY_DISPLAY_UPDATE");
     self:RegisterEvent("EQUIPMENT_SETS_CHANGED");
     self:RegisterEvent("TIME_PLAYED_MSG");
 end
@@ -112,11 +120,15 @@ function TP.Button_OnEvent(self, event, ...)
 
         if (TitanPlayedTimes[name].sessions[current_entry] == nil) then
             if (TitanPlayedTimes[name].last == nil) then
-                TitanPlayedTimes[name].sessions[current_entry] = { played = 0; money = 0; };
-            else
-                TitanPlayedTimes[name].sessions[current_entry] = { played = TitanPlayedTimes[name].sessions[TitanPlayedTimes[name].last].played;
-                                                                   money = TitanPlayedTimes[name].sessions[TitanPlayedTimes[name].last].money;
+                TitanPlayedTimes[name].sessions[current_entry] = { played   = 0;
+                                                                   money    = 0;
+                                                                   apexis   = 0;
+                                                                   garrison = 0;
+                                                                   conquest = 0;
+                                                                   honor    = 0;
                                                                  };
+            else
+                TitanPlayedTimes[name].sessions[current_entry] = self:CopySession(TitanPlayedTimes[name].sessions[TitanPlayedTimes[name].last])
             end
             TitanPlayedTimes[name].last = current_entry;
         end
@@ -130,11 +142,13 @@ function TP.Button_OnEvent(self, event, ...)
         local dest_entry = current_time - (current_time % (3600 * 24));
 
         if (dest_entry ~= current_entry) then
-            TitanPlayedTimes[name].sessions[dest_entry] = { played = TitanPlayedTimes[name].sessions[current_entry].played + (current_time - reference_time);
-                                                            money = TitanPlayedTimes[name].sessions[current_entry].money;
-                                                          };
+            local current_session = TitanPlayedTimes[name].sessions[current_entry];
 
-            TitanPlayedTimes[name].sessions[current_entry].played = TitanPlayedTimes[name].sessions[current_entry].played + (dest_entry - reference_time);
+            TitanPlayedTimes[name].sessions[dest_entry] = self:CopySession(current_session);
+            TitanPlayedTimes[name].sessions[dest_entry].played = current_session.played + (current_time - reference_time);
+
+            current_session.played = current_session.played + (dest_entry - reference_time);
+
             current_entry = dest_entry;
             reference_time = current_time;
             TitanPlayedTimes[name].last = current_entry;
@@ -150,6 +164,19 @@ function TP.Button_OnEvent(self, event, ...)
 
     elseif (event == "PLAYER_MONEY") then
         TitanPlayedTimes[name].sessions[current_entry].money = GetMoney();
+
+    elseif (event == "CURRENCY_DISPLAY_UPDATE") then
+        local _, amount, _ = GetCurrencyInfo(TP.CURRENCY_APEXIS_CRISTALS)
+        TitanPlayedTimes[name].sessions[current_entry].apexis = amount;
+
+        _, amount, _ = GetCurrencyInfo(TP.CURRENCY_GARRISON_RESOURCES)
+        TitanPlayedTimes[name].sessions[current_entry].garrison = amount;
+
+        _, amount, _ = GetCurrencyInfo(TP.CURRENCY_CONQUEST_POINTS)
+        TitanPlayedTimes[name].sessions[current_entry].conquest = amount;
+
+        _, amount, _ = GetCurrencyInfo(TP.CURRENCY_HONOR_POINTS)
+        TitanPlayedTimes[name].sessions[current_entry].honor = amount;
 
     elseif (event == "EQUIPMENT_SETS_CHANGED") then
         local count = GetNumEquipmentSets();
@@ -181,11 +208,12 @@ function TP.Button_OnEvent(self, event, ...)
         reference_time = current_time;
 
         if (dest_entry ~= current_entry) then
-            TitanPlayedTimes[name].sessions[dest_entry] = { played = arg1;
-                                                            money = TitanPlayedTimes[name].sessions[current_entry].money;
-                                                          };
+            local current_session = TitanPlayedTimes[name].sessions[current_entry];
 
-            TitanPlayedTimes[name].sessions[current_entry].played = arg1 - (current_time - dest_entry);
+            TitanPlayedTimes[name].sessions[dest_entry] = self:CopySession(current_session);
+            TitanPlayedTimes[name].sessions[dest_entry].played = arg1;
+
+            current_session.played = arg1 - (current_time - dest_entry);
             current_entry = dest_entry;
             TitanPlayedTimes[name].last = current_entry;
         else
@@ -297,4 +325,16 @@ end
 function TitanPanelRightClickMenu_PreparePlayedMenu()
     TitanPanelRightClickMenu_AddTitle(TitanPlugins[TP.id].menuText);
     TitanPanelRightClickMenu_AddCommand(TP.menu_hide, TP.id, TITAN_PANEL_MENU_FUNC_HIDE);
+end
+
+
+
+function TP.CopySession(self, session)
+    return { played   = self, session.played;
+             money    = self, session.money;
+             apexis   = self, session.apexis;
+             garrison = self, session.garrison;
+             conquest = self, session.conquest;
+             honor    = self, session.honor;
+           };
 end
