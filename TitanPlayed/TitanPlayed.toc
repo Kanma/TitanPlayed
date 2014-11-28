@@ -6,7 +6,7 @@
 ## SavedVariables: TitanPlayedTimes
 ## OptionalDeps: 
 ## Dependencies: Titan
-## Version: 1.0
+## Version: 1.1
 libs\LibQTip-1.0\LibQTip-1.0.lua
 libs\LibStub\LibStub.lua
 TitanPlayed.xml
