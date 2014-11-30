@@ -128,7 +128,7 @@ function TP.Button_OnEvent(self, event, ...)
                                                                    honor    = 0;
                                                                  };
             else
-                TitanPlayedTimes[name].sessions[current_entry] = self:CopySession(TitanPlayedTimes[name].sessions[TitanPlayedTimes[name].last])
+                TitanPlayedTimes[name].sessions[current_entry] = TP.CopySession(TitanPlayedTimes[name].sessions[TitanPlayedTimes[name].last])
             end
             TitanPlayedTimes[name].last = current_entry;
         end
@@ -144,7 +144,7 @@ function TP.Button_OnEvent(self, event, ...)
         if (dest_entry ~= current_entry) then
             local current_session = TitanPlayedTimes[name].sessions[current_entry];
 
-            TitanPlayedTimes[name].sessions[dest_entry] = self:CopySession(current_session);
+            TitanPlayedTimes[name].sessions[dest_entry] = TP.CopySession(current_session);
             TitanPlayedTimes[name].sessions[dest_entry].played = current_session.played + (current_time - reference_time);
 
             current_session.played = current_session.played + (dest_entry - reference_time);
@@ -210,7 +210,7 @@ function TP.Button_OnEvent(self, event, ...)
         if (dest_entry ~= current_entry) then
             local current_session = TitanPlayedTimes[name].sessions[current_entry];
 
-            TitanPlayedTimes[name].sessions[dest_entry] = self:CopySession(current_session);
+            TitanPlayedTimes[name].sessions[dest_entry] = TP.CopySession(current_session);
             TitanPlayedTimes[name].sessions[dest_entry].played = arg1;
 
             current_session.played = arg1 - (current_time - dest_entry);
@@ -329,12 +329,12 @@ end
 
 
 
-function TP.CopySession(self, session)
-    return { played   = self, session.played;
-             money    = self, session.money;
-             apexis   = self, session.apexis;
-             garrison = self, session.garrison;
-             conquest = self, session.conquest;
-             honor    = self, session.honor;
+function TP.CopySession(session)
+    return { played   = session.played;
+             money    = session.money;
+             apexis   = session.apexis;
+             garrison = session.garrison;
+             conquest = session.conquest;
+             honor    = session.honor;
            };
 end
