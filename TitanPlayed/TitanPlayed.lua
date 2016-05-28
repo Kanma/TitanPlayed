@@ -91,7 +91,9 @@ end
 -- USE  : _OnEvent handler from the XML file
 -- --------------------------------------------------------------------------
 function TP.Button_OnEvent(self, event, ...)
-    local name = UnitName("player")
+    local player_name = UnitName("player")
+    local realm_name = GetRealmName()
+    local name = player_name .. '/' .. realm_name;
 
     if (event == "ADDON_LOADED") then
         local current_time = time();
