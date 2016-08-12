@@ -16,6 +16,7 @@ import matplotlib.dates
 # Colors from http://www.wowwiki.com/Class_colors
 CLASS_COLORS = {
     'DEATHKNIGHT':  '#C41F3B',
+    'DEMONHUNTER':  '#A330C9'
     'DRUID':        '#FF7D0A',
     'HUNTER':       '#ABD473',
     'MAGE':         '#69CCF0',
